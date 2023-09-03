@@ -1,0 +1,62 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/Scotty3D",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}/media",
+      "environment": [],
+      "windows": {
+        "type": "cppvsdbg",
+        "console": "internalConsole"
+      },
+      "osx": {
+        "MIMode": "lldb"
+      },
+      "preLaunchTask": "Build"
+    },
+    {
+      "name": "Tests",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/Scotty3D",
+      "args": [
+        "--run-tests"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}/media",
+      "environment": [],
+      "windows": {
+        "type": "cppvsdbg",
+        "console": "internalConsole"
+      },
+      "osx": {
+        "MIMode": "lldb"
+      },
+      "preLaunchTask": "Build"
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "c:/Users/yunqi/Scotty3D",
+      "program": "c:/Users/yunqi/Scotty3D/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}

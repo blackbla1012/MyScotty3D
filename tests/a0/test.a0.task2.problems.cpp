@@ -10,19 +10,19 @@
 //       compilation errors go away, and move onto the next problem.
 // Hint: there are 3 parts that need to be fixed.
 
-/*
+
 Test test_a0_task2_problems_print("a0.task2.problems.print", []() {
-    string str = "str";
+    std::string str = "str";
     int integer = 0;
     float flt = 0.1f;
 
 	// Most common ways of printing a line of text in Scotty3D are:
-    printf("\n1. printf with format specifiers such as string %s, interger %d, and float %f.\n", str.c_str(), integer, flt)
+    printf("\n1. printf with format specifiers such as string %s, interger %d, and float %f.\n", str.c_str(), integer, flt);
     
-    std::cour << "2. std::cout and std::endl with multiple insertion operators like " 
+    std::cout << "2. std::cout and std::endl with multiple insertion operators like " 
               << str + ", " << integer << ", and " << flt << "." << std::endl;
 });
-*/
+
 
 // A0T2: Problem 2
 // TODO: We want to pass our target 2D vector through a filter called helper, 
@@ -40,11 +40,11 @@ Test test_a0_task2_problems_numerical("a0.task2.problems.numerical", []() {
     // Ex) let x = 1, y = 4. y / 3 = 4 / 3 = 1.333 > 1, so x < y / 3. Return true.
 
     int factor = 3;
-    auto helper = [&](int x, int y) { return x < (y / factor); };
+    auto helper = [&](int x, int y) { return x < (1.00 * y / factor); };
 
     int j = 0;
     int mod_size = (int)modifiers.size();
-    for (auto& v : target) {
+    for (auto & v : target) {
         for (auto& i : v) {
             int y = j >= mod_size ? 0 : modifiers.at(j);
             i = helper(i, y) ? i : 0;
@@ -56,6 +56,8 @@ Test test_a0_task2_problems_numerical("a0.task2.problems.numerical", []() {
 
     if (Test::differs(target[0], expected[0]) || Test::differs(target[1], expected[1]) || Test::differs(target[2], expected[2]))
         throw Test::error("The vector does not match the expected result.");
+
+        
 });
 
 // A0T2: Problem 3
