@@ -11,7 +11,7 @@ Mat4 Transform::parent_to_local() const {
 
 Mat4 Transform::local_to_world() const {
 
-	 Mat4 result = Mat4::translate(translation) * rotation.to_mat() * Mat4::scale(scale);
+	Mat4 result = Mat4::translate(translation) * rotation.to_mat() * Mat4::scale(scale);
 
     if (std::shared_ptr<Transform> parent_ = parent.lock()) {
         result = parent_->local_to_world() * result;
@@ -22,8 +22,6 @@ Mat4 Transform::local_to_world() const {
 }
 
 Mat4 Transform::world_to_local() const {
-	// A1T1: world_to_local
-	//don't use Mat4::inverse() in your code.
 
 	Mat4 result = Mat4::scale(1.0f / scale) * rotation.inverse().to_mat() * Mat4::translate(-translation);
 
@@ -31,7 +29,7 @@ Mat4 Transform::world_to_local() const {
         result = result * parent_->world_to_local();
     }
 
-	return result; //<-- wrong, but here so code will compile
+	return result; 
 }
 
 bool operator!=(const Transform& a, const Transform& b) {
