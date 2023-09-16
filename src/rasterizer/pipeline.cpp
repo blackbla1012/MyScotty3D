@@ -356,6 +356,15 @@ void Pipeline<p, P, flags>::rasterize_line(
 		assert(0 && "rasterize_line should only be invoked in flat interpolation mode.");
 	}
 
+	auto SetFragment = [](Fragment p, ClippedVertex const& start_, int x, int y, std::function<void(Fragment const&)> const& emit_fragment) {
+		p.fb_position.x = (float)(x + 0.5);
+		p.fb_position.y = (float)(y + 0.5);
+		p.attributes = start_.attributes;
+		p.derivatives.fill(Vec2(0.0f, 0.0f));
+		emit_fragment(p);
+		return 0;
+	};
+
 	float x1 = va.fb_position.x;
 	float x2 = vb.fb_position.x;
 	float y1 = va.fb_position.y;
@@ -383,11 +392,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( x==(int)x1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
 			else{
 				Fragment mid;
-				mid.fb_position.x = (float)(x + 0.5);
-				mid.fb_position.y = (float)(y + 0.5);
-				mid.attributes = va.attributes;
-				mid.derivatives.fill(Vec2(0.0f, 0.0f));
-				emit_fragment(mid);
+				SetFragment(mid, va, x, y, emit_fragment);
 			}
 
 			eps += dy;
@@ -406,11 +411,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))> 0.5)){}
 			else{
 				Fragment mid;
-				mid.fb_position.x = (float)(x + 0.5);
-				mid.fb_position.y = (float)(y + 0.5);
-				mid.attributes = va.attributes;
-				mid.derivatives.fill(Vec2(0.0f, 0.0f));
-				emit_fragment(mid);
+				SetFragment(mid, va, x, y, emit_fragment);
 			}
 
 			eps += dx;
@@ -429,16 +430,12 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( x==(int)x1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
 			else{
 				Fragment mid;
-				mid.fb_position.x = (float)(x + 0.5);
-				mid.fb_position.y = (float)(y + 0.5);
-				mid.attributes = va.attributes;
-				mid.derivatives.fill(Vec2(0.0f, 0.0f));
-				emit_fragment(mid);
+				SetFragment(mid, va, x, y, emit_fragment);
 			}
 			eps += dy;
 			if((eps << 1) <= -dx){
-				 y--;
-				 eps += dx;
+				y--;
+				eps += dx;
 			}
 		}
 	}
@@ -451,11 +448,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) < 0.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
 			else{
 				Fragment mid;
-				mid.fb_position.x = (float)(x + 0.5);
-				mid.fb_position.y = (float)(y + 0.5);
-				mid.attributes = va.attributes;
-				mid.derivatives.fill(Vec2(0.0f, 0.0f));
-				emit_fragment(mid);
+				SetFragment(mid, va, x, y, emit_fragment);
 			}
 			eps -= dx;
 			if((eps << 1) <= dy){
@@ -463,9 +456,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 				eps -= dy;
 			}
 		}
-	}
-
-	
+	}	
 }
 
 
