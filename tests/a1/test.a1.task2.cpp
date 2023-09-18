@@ -297,4 +297,11 @@ Test test_a1_task2_diamond_diagonal_3unit_exit("a1.task2.diamond.diagonal.3unit.
 											 "#.."});
 });
 
+Test test_a1_task2_trial2("a1.task2.diamond.trial2", []() {
+    check_line_covers("trial2",
+                      {Vec2(0.0f, 0.5f), Vec2(0.75f, 2.9f)},
+                      {"#..", 
+						"#..", 
+						"#.."});
+});
 

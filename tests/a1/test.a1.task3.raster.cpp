@@ -312,4 +312,89 @@ Test test_a1_task3_raster_thin_2px("a1.task3.raster.thin.2px", []() {
 	);
 });
 
+Test test_a1_task3_raster_top_left_rule_1("a1.task3.raster.topleftrule.1", []() {
+ check_rasterize_triangles("sample on vertical left edge, clockwise",
+  { FPClippedVertex{ Vec3{ 1.5f, 1.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.5f, 2.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.5f, 0.5f }, 3.0f, { 3.0f } } },
+  { FPFragment{ Vec3{ 1.5f, 1.5f, 0.5f }, {1.0f}, { Vec2{0.0f} } } });
+});
+Test test_a1_task3_raster_top_left_rule_2("a1.task3.raster.topleftrule.2", []() {
+ check_rasterize_triangles("sample on vertical left edge, counter-clockwise",
+  { FPClippedVertex{ Vec3{ 1.5f, 2.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.5f, 1.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.5f, 0.5f }, 3.0f, { 3.0f } } },
+  { FPFragment{ Vec3{ 1.5f, 1.5f, 0.5f }, {1.0f}, { Vec2{0.0f} } } });
+});
+Test test_a1_task3_raster_top_left_rule_3("a1.task3.raster.topleftrule.3", []() {
+ check_rasterize_triangles("sample on vertical right edge, clockwise",
+  { FPClippedVertex{ Vec3{ 1.5f, 2.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.5f, 1.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 1.5f, 0.5f }, 3.0f, { 3.0f } } },
+  {});
+});
+Test test_a1_task3_raster_top_left_rule_4("a1.task3.raster.topleftrule.4", []() {
+ check_rasterize_triangles("sample on vertical right edge, counter-clockwise",
+  { FPClippedVertex{ Vec3{ 1.5f, 1.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.5f, 2.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 1.5f, 0.5f }, 3.0f, { 3.0f } } },
+  {});
+});
+Test test_a1_task3_raster_top_left_rule_5("a1.task3.raster.topleftrule.5", []() {
+ check_rasterize_triangles("sample on top edge, clockwise",
+  { FPClippedVertex{ Vec3{ 1.0f, 1.5f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.5f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 1.5f, 1.0f, 0.5f }, 3.0f, { 3.0f } } },
+  { FPFragment{ Vec3{ 1.5f, 1.5f, 0.5f }, {1.0f}, { Vec2{0.0f} } } });
+});
+Test test_a1_task3_raster_top_left_rule_6("a1.task3.raster.topleftrule.6", []() {
+ check_rasterize_triangles("sample on top edge, counter-clockwise",
+  { FPClippedVertex{ Vec3{ 2.0f, 1.5f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 1.5f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 1.5f, 1.0f, 0.5f }, 3.0f, { 3.0f } } },
+  { FPFragment{ Vec3{ 1.5f, 1.5f, 0.5f }, {1.0f}, { Vec2{0.0f} } } });
+});
+Test test_a1_task3_raster_top_left_rule_7("a1.task3.raster.topleftrule.7", []() {
+ check_rasterize_triangles("sample on bottom edge, clockwise",
+  { FPClippedVertex{ Vec3{ 1.5f, 2.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.5f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 1.5f, 0.5f }, 3.0f, { 3.0f } } },
+  {});
+});
+Test test_a1_task3_raster_top_left_rule_8("a1.task3.raster.topleftrule.8", []() {
+ check_rasterize_triangles("sample on bottom edge, counter-clockwise",
+  { FPClippedVertex{ Vec3{ 1.5f, 2.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 1.5f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.5f, 0.5f }, 3.0f, { 3.0f } } },
+  {});
+});
+Test test_a1_task3_raster_top_left_rule_9("a1.task3.raster.topleftrule.9", []() {
+ check_rasterize_triangles("sample on diagonal left edge, clockwise",
+  { FPClippedVertex{ Vec3{ 1.0f, 1.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 2.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.0f, 0.5f }, 3.0f, { 3.0f } } },
+  { FPFragment{ Vec3{ 1.5f, 1.5f, 0.5f }, {1.0f}, { Vec2{0.0f} } } });
+});
+Test test_a1_task3_raster_top_left_rule_10("a1.task3.raster.topleftrule.10", []() {
+ check_rasterize_triangles("sample on diagonal left edge, counter-clockwise",
+  { FPClippedVertex{ Vec3{ 2.0f, 2.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 1.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.0f, 0.5f }, 3.0f, { 3.0f } } },
+  { FPFragment{ Vec3{ 1.5f, 1.5f, 0.5f }, {1.0f}, { Vec2{0.0f} } } });
+});
+Test test_a1_task3_raster_top_left_rule_11("a1.task3.raster.topleftrule.11", []() {
+ check_rasterize_triangles("sample on diagonal right edge, clockwise",
+  { FPClippedVertex{ Vec3{ 1.0f, 1.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 2.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.0f, 0.5f }, 3.0f, { 3.0f } } },
+  {});
+});
+Test test_a1_task3_raster_top_left_rule_12("a1.task3.raster.topleftrule.12", []() {
+ check_rasterize_triangles("sample on diagonal right edge, counter-clockwise",
+  { FPClippedVertex{ Vec3{ 1.0f, 2.0f, 0.5f }, 1.0f, { 1.0f } },
+    FPClippedVertex{ Vec3{ 1.0f, 1.0f, 0.5f }, 2.0f, { 2.0f } },
+    FPClippedVertex{ Vec3{ 2.0f, 1.0f, 0.5f }, 3.0f, { 3.0f } } },
+  {});
+});
+
 

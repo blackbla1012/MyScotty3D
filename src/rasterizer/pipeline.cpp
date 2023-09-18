@@ -356,9 +356,10 @@ void Pipeline<p, P, flags>::rasterize_line(
 		assert(0 && "rasterize_line should only be invoked in flat interpolation mode.");
 	}
 
-	auto SetFragment = [](Fragment p, ClippedVertex const& start_, int x, int y, std::function<void(Fragment const&)> const& emit_fragment) {
+	auto SetFragment = [](Fragment p, ClippedVertex const& start_, int x, int y, int fullX, std::function<void(Fragment const&)> const& emit_fragment) {
 		p.fb_position.x = (float)(x + 0.5);
 		p.fb_position.y = (float)(y + 0.5);
+		p.fb_position.z = (float)(x - (int)start_.fb_position.x) / (float)fullX;//interpolate z
 		p.attributes = start_.attributes;
 		p.derivatives.fill(Vec2(0.0f, 0.0f));
 		emit_fragment(p);
@@ -392,7 +393,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( x==(int)x1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
 			else{
 				Fragment mid;
-				SetFragment(mid, va, x, y, emit_fragment);
+				SetFragment(mid, va, x, y, dx, emit_fragment);
 			}
 
 			eps += dy;
@@ -411,7 +412,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))> 0.5)){}
 			else{
 				Fragment mid;
-				SetFragment(mid, va, x, y, emit_fragment);
+				SetFragment(mid, va, x, y, dx, emit_fragment);
 			}
 
 			eps += dx;
@@ -430,7 +431,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( x==(int)x1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
 			else{
 				Fragment mid;
-				SetFragment(mid, va, x, y, emit_fragment);
+				SetFragment(mid, va, x, y, dx, emit_fragment);
 			}
 			eps += dy;
 			if((eps << 1) <= -dx){
@@ -448,7 +449,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) < 0.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
 			else{
 				Fragment mid;
-				SetFragment(mid, va, x, y, emit_fragment);
+				SetFragment(mid, va, x, y, dx, emit_fragment);
 			}
 			eps -= dx;
 			if((eps << 1) <= dy){
@@ -506,15 +507,123 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 	//  same code paths. Be aware, however, that all of them need to remain working!
 	//  (e.g., if you break Flat while implementing Correct, you won't get points
 	//   for Flat.)
+
 	if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Flat) {
 		// A1T3: flat triangles
 		// TODO: rasterize triangle (see block comment above this function).
 
-		// As a placeholder, here's code that draws some lines:
-		//(remove this and replace it with a real solution)
-		Pipeline<PrimitiveType::Lines, P, flags>::rasterize_line(va, vb, emit_fragment);
-		Pipeline<PrimitiveType::Lines, P, flags>::rasterize_line(vb, vc, emit_fragment);
-		Pipeline<PrimitiveType::Lines, P, flags>::rasterize_line(vc, va, emit_fragment);
+		//cross product in 2D
+		auto cross2D = [](Vec2 a, Vec2 b) -> float {
+			return a.x * b.y - a.y * b.x;
+		};
+
+		//calculate area of triangle by cross product
+		auto TriArea = [&cross2D] (Vec2 x, Vec2 y){
+			return abs(cross2D(x,y)) / 2.0f;
+		};
+
+		//set fragment function
+		auto SetFragment = [&TriArea](Fragment Pixel, Vec2 P_center, Vec2 aPVec, Vec2 bPVec, Vec2 cPVec, Vec2 acVec, Vec2 cbVec, Vec2 baVec, ClippedVertex const& va, ClippedVertex const& vb, ClippedVertex const& vc, float TriFullS, std::function<void(Fragment const&)> const& emit_fragment) {
+			Pixel.fb_position.x = P_center.x;
+			Pixel.fb_position.y = P_center.y;
+			Pixel.fb_position.z = TriArea(acVec, aPVec)*vb.fb_position.z/TriFullS + TriArea(cbVec, cPVec)*va.fb_position.z/TriFullS + TriArea(baVec, bPVec)*vc.fb_position.z/TriFullS;
+			Pixel.attributes = va.attributes;
+			Pixel.derivatives.fill(Vec2(0.0f, 0.0f));
+			emit_fragment(Pixel);
+			return 0;
+		};
+		
+		int left = (int)std::min(va.fb_position.x, std::min(vb.fb_position.x, vc.fb_position.x));
+		int top = (int)std::max(va.fb_position.y, std::max(vb.fb_position.y, vc.fb_position.y));
+		int right = (int)std::max(va.fb_position.x, std::max(vb.fb_position.x, vc.fb_position.x));
+		int bottom = (int)std::min(va.fb_position.y, std::min(vb.fb_position.y, vc.fb_position.y));
+
+		//initialize vector ab & ac
+		auto abVec = Vec2(vb.fb_position.x - va.fb_position.x, vb.fb_position.y - va.fb_position.y);
+		auto acVec = Vec2(vc.fb_position.x - va.fb_position.x, vc.fb_position.y - va.fb_position.y);
+
+		//initialize vector ba & bc
+		auto baVec = Vec2(va.fb_position.x - vb.fb_position.x, va.fb_position.y - vb.fb_position.y);
+		auto bcVec = Vec2(vc.fb_position.x - vb.fb_position.x, vc.fb_position.y - vb.fb_position.y);
+
+		//initialize vector ca & cb
+		auto caVec = Vec2(va.fb_position.x - vc.fb_position.x, va.fb_position.y - vc.fb_position.y);
+		auto cbVec = Vec2(vb.fb_position.x - vc.fb_position.x, vb.fb_position.y - vc.fb_position.y);
+
+		//calculate the area of triangle
+		float TriFullS = TriArea(abVec, acVec);
+
+		//judge if it's a triangle
+		if(TriFullS == 0)
+		{
+			return;
+		}
+
+		//test if the va-vb is top or left edge
+		auto TestTopOrLeft = [&cross2D](ClippedVertex const& va, ClippedVertex const& vb, ClippedVertex const& vc)->bool {
+
+			//judge top edges:
+			if(va.fb_position.y == vb.fb_position.y && va.fb_position.y > vc.fb_position.y){
+				return true;
+			}
+			
+			//judge left edges:
+			//initialize dx, dy
+			float dy = vb.fb_position.y - va.fb_position.y;
+
+			//initialize vector ab & ac
+			auto abVec = Vec2(vb.fb_position.x - va.fb_position.x, vb.fb_position.y - va.fb_position.y);
+			auto acVec = Vec2(vc.fb_position.x - va.fb_position.x, vc.fb_position.y - va.fb_position.y);
+
+			if(dy * cross2D(abVec, acVec) < 0){
+				return true;
+			}
+		
+			return false;
+		};
+
+		for( int x = left; x <= right; x++){
+			for( int y = bottom; y <= top; y++){
+				auto P_center = Vec2((float)(x+0.5), (float)(y+0.5));
+				auto aPVec = Vec2(P_center.x - va.fb_position.x, P_center.y - va.fb_position.y);
+				auto bPVec = Vec2(P_center.x - vb.fb_position.x, P_center.y - vb.fb_position.y);
+				auto cPVec = Vec2(P_center.x - vc.fb_position.x, P_center.y - vc.fb_position.y);
+
+				float judge1 = cross2D(acVec, abVec) * cross2D(acVec, aPVec);
+				float judge2 = cross2D(cbVec, caVec) * cross2D(cbVec, cPVec);
+				float judge3 = cross2D(baVec, bcVec) * cross2D(baVec, bPVec);
+
+				if( judge1 > 0 && judge2 > 0 && judge3 > 0){
+					Fragment Pixel;
+					SetFragment(Pixel, P_center, aPVec, bPVec, cPVec, acVec, cbVec, baVec, va, vb, vc, TriFullS, emit_fragment);
+				}
+				else if( judge1 == 0 && judge2 > 0 && judge3 > 0 && TestTopOrLeft(va, vc, vb)){
+					Fragment Pixel;
+					SetFragment(Pixel, P_center, aPVec, bPVec, cPVec, acVec, cbVec, baVec, va, vb, vc, TriFullS, emit_fragment);
+				}
+				else if( judge1 > 0 && judge2 == 0 && judge3 > 0 && TestTopOrLeft(vb, vc, va)){
+					Fragment Pixel;
+					SetFragment(Pixel, P_center, aPVec, bPVec, cPVec, acVec, cbVec, baVec, va, vb, vc, TriFullS, emit_fragment);
+				}
+				else if( judge1 > 0 && judge2 > 0 && judge3 == 0 && TestTopOrLeft(vb, va, vc)){
+					Fragment Pixel;
+					SetFragment(Pixel, P_center, aPVec, bPVec, cPVec, acVec, cbVec, baVec, va, vb, vc, TriFullS, emit_fragment);
+				}
+				else if( judge1 == 0 && judge2 == 0 && judge3 > 0 && TestTopOrLeft(va, vc, vb) && TestTopOrLeft(vb, vc, va)){
+					Fragment Pixel;
+					SetFragment(Pixel, P_center, aPVec, bPVec, cPVec, acVec, cbVec, baVec, va, vb, vc, TriFullS, emit_fragment);
+				}
+				else if( judge1 == 0 && judge2 > 0 && judge3 == 0 && TestTopOrLeft(va, vc, vb) && TestTopOrLeft(vb, va, vc)){
+					Fragment Pixel;
+					SetFragment(Pixel, P_center, aPVec, bPVec, cPVec, acVec, cbVec, baVec, va, vb, vc, TriFullS, emit_fragment);
+				}
+				else if( judge1 > 0 && judge2 == 0 && judge3 == 0 && TestTopOrLeft(vb, vc, va) && TestTopOrLeft(vb, va, vc)){
+					Fragment Pixel;
+					SetFragment(Pixel, P_center, aPVec, bPVec, cPVec, acVec, cbVec, baVec, va, vb, vc, TriFullS, emit_fragment);
+				}
+			}
+		}
+
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Smooth) {
 		// A1T5: screen-space smooth triangles
 		// TODO: rasterize triangle (see block comment above this function).
