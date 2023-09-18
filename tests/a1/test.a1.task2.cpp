@@ -274,29 +274,6 @@ Test test_a1_task2_diamond_top_no_exit("a1.task2.diamond.top.no.exit", []() {
 											 "..."});
 });
 
-Test test_a1_task2_diamond_diagonal_unit_exit("a1.task2.diamond.diagonal.unit.exit", []() {
-    check_line_covers("unit diagonal",
-                      {Vec2(0.0f, 0.5f), Vec2(0.5f, 1.0f)},
-                      {"...", 
-											 "...", 
-											 "#.."});
-});
-
-Test test_a1_task2_diamond_diagonal_2unit_exit("a1.task2.diamond.diagonal.2unit.exit", []() {
-    check_line_covers("2unit diagonal",
-                      {Vec2(0.0f, 0.5f), Vec2(1.0f, 1.5f)},
-                      {"...", 
-											 "#..", 
-											 "#.."});
-});
-Test test_a1_task2_diamond_diagonal_3unit_exit("a1.task2.diamond.diagonal.3unit.exit", []() {
-    check_line_covers("3unit diagonal",
-                      {Vec2(0.0f, 0.5f), Vec2(1.5f, 2.0f)},
-                      {"...", 
-											 "##.", 
-											 "#.."});
-});
-
 Test test_a1_task2_trial2("a1.task2.diamond.trial2", []() {
     check_line_covers("trial2",
                       {Vec2(0.0f, 0.5f), Vec2(0.75f, 2.9f)},

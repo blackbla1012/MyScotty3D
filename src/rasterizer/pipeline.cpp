@@ -565,10 +565,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			}
 			
 			//judge left edges:
-			//initialize dy
 			float dy = vb.fb_position.y - va.fb_position.y;
-
-			//initialize vector ab & ac
 			auto abVec = Vec2(vb.fb_position.x - va.fb_position.x, vb.fb_position.y - va.fb_position.y);
 			auto acVec = Vec2(vc.fb_position.x - va.fb_position.x, vc.fb_position.y - va.fb_position.y);
 
