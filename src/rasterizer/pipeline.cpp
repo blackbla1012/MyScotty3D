@@ -354,13 +354,13 @@ void Pipeline<p, P, flags>::rasterize_line(
 		assert(0 && "rasterize_line should only be invoked in flat interpolation mode.");
 	}
 
-	auto SetFragment = [](Fragment p, ClippedVertex const& start_, int x, int y, int fullX, std::function<void(Fragment const&)> const& emit_fragment) {
-		p.fb_position.x = (float)(x + 0.5);
-		p.fb_position.y = (float)(y + 0.5);
-		p.fb_position.z = (float)(x - (int)start_.fb_position.x) / (float)fullX;//interpolate z
-		p.attributes = start_.attributes;
-		p.derivatives.fill(Vec2(0.0f, 0.0f));
-		emit_fragment(p);
+	auto SetFragment = [](Fragment pFrag, ClippedVertex const& start_, int x, int y, int fullX, std::function<void(Fragment const&)> const& emit_fragment) {
+		pFrag.fb_position.x = (float)(x + 0.5);
+		pFrag.fb_position.y = (float)(y + 0.5);
+		pFrag.fb_position.z = (float)(x - (int)start_.fb_position.x) / (float)fullX;//interpolate z
+		pFrag.attributes = start_.attributes;
+		pFrag.derivatives.fill(Vec2(0.0f, 0.0f));
+		emit_fragment(pFrag);
 		return 0;
 	};
 
@@ -385,7 +385,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 	
 	if(dy >= 0 && dy <= dx)
 	{
-		for( x; x <= x2 ; x++) {
+		for(; x <= x2 ; x++) {
 			if( sw == 0 && x==(int)x2 && ((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5)) ){}
 			else if( sw == 1 && x==(int)x1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5)) ){}
 			else if( x==(int)x2 && (((x2-(int)x2)+(y2-(int)y2)) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){}
@@ -404,7 +404,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 	}
 	else if(dy >= 0 && dy > dx)
 	{
-		for( y; y <= y2; y++ ){
+		for(; y <= y2; y++ ){
 			if( sw == 0 && y==(int)y2 && ((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5)) ){continue;}
 			else if( sw == 1 && y==(int)y1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5)) ){continue;}
 			else if( y==(int)y2 && ((x2-(int)x2)+(y2-(int)y2) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))< -0.5)){continue;}
@@ -423,7 +423,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 	}
 	else if(dy < 0 && dy >= -dx)
 	{
-		for(x; x <= x2; x++){
+		for(; x <= x2; x++){
 			if( sw == 0 && x==(int)x2 &&((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5)) ){continue;}
 			else if( sw == 1 && x==(int)x1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5)) ){continue;}
 			else if( x==(int)x2 && (((x2-(int)x2)+(y2-(int)y2)) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){continue;}
@@ -441,7 +441,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 	}
 	else if( dy < 0 && dy < -dx)
 	{
-		for(y; y >= y2; y--){
+		for(; y >= y2; y--){
 			if( sw == 0 && y==(int)y2 && ((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5))){continue;}
 			else if( sw == 1 && y==(int)y1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5))){continue;}
 			else if( y==(int)y2 && (((x2-(int)x2)+(y2-(int)y2)) > 1.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){continue;}
