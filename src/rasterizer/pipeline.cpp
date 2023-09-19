@@ -376,17 +376,18 @@ void Pipeline<p, P, flags>::rasterize_line(
 		sw = 1;
 	}
 
-	int dx = (int)(x2 - x1);
-	int dy = (int)(y2 - y1);
-	int x = (int)x1;
-	int y = (int)y1;
+	int dx = (int)floor(x2) - (int)floor(x1);
+	int dy = (int)floor(y2) - (int)floor(y1);
+	int x = (int)floor(x1);
+	int y = (int)floor(y1);
 	int eps = 0;
 
+	
 	if(dy >= 0 && dy <= dx)
 	{
 		for( x; x <= x2 ; x++) {
-			if( sw == 0 && x==(int)x2 && ((x2-(int)x2)+(y2-(int)y2)) >= 0.5 && ((x2-(int)x2)+(y2-(int)y2)) <= 1.5 && ((y2-(int)y2)-(x2-(int)x2))>= -0.5 &&((y2-(int)y2)-(x2-(int)x2))<= 0.5 ){}
-			else if( sw == 1 && x==(int)x1 && ((x1-(int)x1)+(y1-(int)y1)) >= 0.5 && ((x1-(int)x1)+(y1-(int)y1)) <= 1.5 && ((y1-(int)y1)-(x1-(int)x1))>= -0.5 && ((y1-(int)y1)-(x1-(int)x1))<= 0.5 ){}
+			if( sw == 0 && x==(int)x2 && ((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5)) ){}
+			else if( sw == 1 && x==(int)x1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5)) ){}
 			else if( x==(int)x2 && (((x2-(int)x2)+(y2-(int)y2)) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){}
 			else if( x==(int)x1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
 			else{
@@ -404,10 +405,10 @@ void Pipeline<p, P, flags>::rasterize_line(
 	else if(dy >= 0 && dy > dx)
 	{
 		for( y; y <= y2; y++ ){
-			if( sw == 0 && y==(int)y2 && ((x2-(int)x2)+(y2-(int)y2)) >= 0.5 && ((x2-(int)x2)+(y2-(int)y2)) <= 1.5 && ((y2-(int)y2)-(x2-(int)x2))>= -0.5 && ((y2-(int)y2)-(x2-(int)x2))<= 0.5 ){}
-			else if( sw == 1 && y==(int)y1 && ((x1-(int)x1)+(y1-(int)y1)) >= 0.5 && ((x1-(int)x1)+(y1-(int)y1)) <= 1.5 && ((y1-(int)y1)-(x1-(int)x1))>= -0.5 && ((y1-(int)y1)-(x1-(int)x1))<= 0.5 ){}
-			else if( y==(int)y2 && ((x2-(int)x2)+(y2-(int)y2) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))< -0.5)){}
-			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))> 0.5)){}
+			if( sw == 0 && y==(int)y2 && ((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5)) ){continue;}
+			else if( sw == 1 && y==(int)y1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5)) ){continue;}
+			else if( y==(int)y2 && ((x2-(int)x2)+(y2-(int)y2) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))< -0.5)){continue;}
+			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))> 0.5)){continue;}
 			else{
 				Fragment mid;
 				SetFragment(mid, va, x, y, dx, emit_fragment);
@@ -423,10 +424,10 @@ void Pipeline<p, P, flags>::rasterize_line(
 	else if(dy < 0 && dy >= -dx)
 	{
 		for(x; x <= x2; x++){
-			if( sw == 0 && x==(int)x2 && ((x2-(int)x2)+(y2-(int)y2)) >= 0.5 && ((x2-(int)x2)+(y2-(int)y2)) <= 1.5 && ((y2-(int)y2)-(x2-(int)x2))>= -0.5 && ((y2-(int)y2)-(x2-(int)x2))<= 0.5 ){}
-			else if( sw == 1 && x==(int)x1 && ((x1-(int)x1)+(y1-(int)y1)) >= 0.5 && ((x1-(int)x1)+(y1-(int)y1)) <= 1.5 && ((y1-(int)y1)-(x1-(int)x1))>= -0.5 && ((y1-(int)y1)-(x1-(int)x1))<= 0.5 ){}
-			else if( x==(int)x2 && (((x2-(int)x2)+(y2-(int)y2)) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){}
-			else if( x==(int)x1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
+			if( sw == 0 && x==(int)x2 &&((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5)) ){continue;}
+			else if( sw == 1 && x==(int)x1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5)) ){continue;}
+			else if( x==(int)x2 && (((x2-(int)x2)+(y2-(int)y2)) < 0.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){continue;}
+			else if( x==(int)x1 && (((x1-(int)x1)+(y1-(int)y1)) > 1.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){continue;}
 			else{
 				Fragment mid;
 				SetFragment(mid, va, x, y, dx, emit_fragment);
@@ -441,10 +442,10 @@ void Pipeline<p, P, flags>::rasterize_line(
 	else if( dy < 0 && dy < -dx)
 	{
 		for(y; y >= y2; y--){
-			if( sw == 0 && y==(int)y2 && ((x2-(int)x2)+(y2-(int)y2)) >= 0.5 && ((x2-(int)x2)+(y2-(int)y2)) <= 1.5 && ((y2-(int)y2)-(x2-(int)x2))>= -0.5 && ((y2-(int)y2)-(x2-(int)x2))<= 0.5 ){}
-			else if( sw == 1 && y==(int)y1 && ((x1-(int)x1)+(y1-(int)y1)) >= 0.5 && ((x1-(int)x1)+(y1-(int)y1)) <= 1.5 && ((y1-(int)y1)-(x1-(int)x1))>= -0.5 && ((y1-(int)y1)-(x1-(int)x1))<= 0.5 ){}
-			else if( y==(int)y2 && (((x2-(int)x2)+(y2-(int)y2)) > 1.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){}
-			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) < 0.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){}
+			if( sw == 0 && y==(int)y2 && ((abs(x2-(int)x2-0.5) + abs(y2-(int)y2-0.5) < 0.5) || (x2-(int)x2 == 0.5 && y2-(int)y2 == 0) || (x2-(int)x2 == 0 && y2-(int)y2 == 0.5))){continue;}
+			else if( sw == 1 && y==(int)y1 && ((abs(x1-(int)x1-0.5) + abs(y1-(int)y1-0.5) < 0.5) || (x1-(int)x1 == 0.5 && y1-(int)y1 == 0) || (x1-(int)x1 == 0 && y1-(int)y1 == 0.5))){continue;}
+			else if( y==(int)y2 && (((x2-(int)x2)+(y2-(int)y2)) > 1.5 || ((y2-(int)y2)-(x2-(int)x2))> 0.5)){continue;}
+			else if( y==(int)y1 && (((x1-(int)x1)+(y1-(int)y1)) < 0.5 || ((y1-(int)y1)-(x1-(int)x1))< -0.5)){continue;}
 			else{
 				Fragment mid;
 				SetFragment(mid, va, x, y, dx, emit_fragment);

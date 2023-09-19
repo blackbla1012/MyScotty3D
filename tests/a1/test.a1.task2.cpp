@@ -281,4 +281,3 @@ Test test_a1_task2_trial2("a1.task2.diamond.trial2", []() {
 						"#..", 
 						"#.."});
 });
-
