@@ -357,7 +357,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 	auto SetFragment = [](Fragment pFrag, ClippedVertex const& start_, ClippedVertex const& end_, int x, int y, int fullX, std::function<void(Fragment const&)> const& emit_fragment) {
 		pFrag.fb_position.x = (float)(x + 0.5);
 		pFrag.fb_position.y = (float)(y + 0.5);
-		pFrag.fb_position.z = end_.fb_position.z * abs(pFrag.fb_position.x - start_.fb_position.x) / abs(end_.fb_position.x - start_.fb_position.x) + start_.fb_position.z * abs(pFrag.fb_position.x - end_.fb_position.x) / abs(end_.fb_position.x - start_.fb_position.x);//interpolate z
+		pFrag.fb_position.z = end_.fb_position.z * abs(pFrag.fb_position.y - start_.fb_position.y) / abs(end_.fb_position.y - start_.fb_position.y) + start_.fb_position.z * abs(pFrag.fb_position.y - end_.fb_position.y) / abs(end_.fb_position.y - start_.fb_position.y);//interpolate z
 		pFrag.attributes = start_.attributes;
 		pFrag.derivatives.fill(Vec2(0.0f, 0.0f));
 		emit_fragment(pFrag);
@@ -456,7 +456,7 @@ void Pipeline<p, P, flags>::rasterize_line(
 				eps -= dy;
 			}
 		}
-	}	
+	}
 }
 
 
