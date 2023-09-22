@@ -502,10 +502,6 @@ template<PrimitiveType p, class P, uint32_t flags>
 void Pipeline<p, P, flags>::rasterize_triangle(
 	ClippedVertex const& va, ClippedVertex const& vb, ClippedVertex const& vc,
 	std::function<void(Fragment const&)> const& emit_fragment) {
-	// NOTE: it is okay to restructure this function to allow these tasks to use the
-	//  same code paths. Be aware, however, that all of them need to remain working!
-	//  (e.g., if you break Flat while implementing Correct, you won't get points
-	//   for Flat.)
 
 	//cross product in 2D
 	auto cross2D = [](Vec2 a, Vec2 b) -> float {
@@ -758,6 +754,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			Pixel.fb_position.x = P_center.x;
 			Pixel.fb_position.y = P_center.y;
 			Pixel.fb_position.z = TriArea(acVec, aPVec)*vb.fb_position.z/TriFullS + TriArea(cbVec, cPVec)*va.fb_position.z/TriFullS + TriArea(baVec, bPVec)*vc.fb_position.z/TriFullS;
+			//compute the 1/w value at the (x, y) pixel
 			float Pixel_w = TriArea(acVec, aPVec)*vb.inv_w/TriFullS + TriArea(cbVec, cPVec)*va.inv_w/TriFullS + TriArea(baVec, bPVec)*vc.inv_w/TriFullS;
 
 			//initialize x+1 Fragment
@@ -769,6 +766,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			auto cPX_1Vec = Vec2(PixelX_1.fb_position.x - vc.fb_position.x, PixelX_1.fb_position.y - vc.fb_position.y);
 			if(CCW){
 				PixelX_1.fb_position.z = SignedTriArea(acVec, aPX_1Vec)*vb.fb_position.z/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.fb_position.z/TriFullS;
+				//compute the 1/w value at the (x+1, y) pixel
 				float PixelX_w = SignedTriArea(acVec, aPX_1Vec)*vb.inv_w/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.inv_w/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.inv_w/TriFullS;
 				for(int i = 0; i < va.attributes.size(); i++){
 					PixelX_1.attributes[i] = (SignedTriArea(acVec, aPX_1Vec)*vb.attributes[i]*vb.inv_w/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.attributes[i]*va.inv_w/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.attributes[i]*vc.inv_w/TriFullS)/PixelX_w;
@@ -776,6 +774,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			}
 			else{
 				PixelX_1.fb_position.z = SignedTriArea(abVec, aPX_1Vec)*vc.fb_position.z/TriFullS + SignedTriArea(bcVec, bPX_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.fb_position.z/TriFullS;
+				//compute the 1/w value at the (x, y+1) pixel
 				float PixelX_w = SignedTriArea(abVec, aPX_1Vec)*vc.inv_w/TriFullS + SignedTriArea(bcVec, bPX_1Vec)*va.inv_w/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.inv_w/TriFullS;
 				for(int i = 0; i < va.attributes.size(); i++){
 					PixelX_1.attributes[i] = (SignedTriArea(abVec, aPX_1Vec)*vc.attributes[i]*vc.inv_w + SignedTriArea(bcVec, bPX_1Vec)*va.attributes[i]*va.inv_w/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.attributes[i]*vb.inv_w/TriFullS)/PixelX_w;
