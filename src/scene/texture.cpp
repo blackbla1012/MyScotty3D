@@ -25,16 +25,71 @@ Spectrum sample_nearest(HDR_Image const &image, Vec2 uv) {
 Spectrum sample_bilinear(HDR_Image const &image, Vec2 uv) {
 	// A1T6: sample_bilinear
 	//TODO: implement bilinear sampling strategy on texture 'image'
+	float x = image.w * std::clamp(uv.x, 0.0f, 1.0f);
+	float y = image.h * std::clamp(uv.y, 0.0f, 1.0f);
 
-	return sample_nearest(image, uv); //placeholder so image doesn't look blank
+	int32_t ix = int32_t(std::round(x)) - 1;
+	int32_t iy = int32_t(std::round(y)) - 1;
+
+	ix = std::clamp(ix, 0, int32_t(image.w) - 1);
+	iy = std::clamp(iy, 0, int32_t(image.h) - 1);
+
+	float dx = x - ix - 0.5f;
+	float dy = y - iy - 0.5f;
+
+	Spectrum Texel_XY = image.at(ix, iy);
+	Spectrum Texel_X1Y = Texel_XY;
+	Spectrum Texel_XY1 = Texel_XY;
+	Spectrum Texel_X1Y1 = Texel_XY1;
+
+	if(ix + 1 < (int32_t)image.w){
+		Texel_X1Y = image.at(ix + 1, iy);
+	}
+
+	if(iy + 1 < (int32_t)image.h){
+		Texel_XY1 = image.at(ix, iy + 1);
+	}
+
+	if(ix + 1 < (int32_t)image.w && iy + 1 < (int32_t)image.h){
+		Texel_X1Y1 = image.at(ix + 1, iy + 1);
+	}
+
+	Spectrum Texel_X = (1 - dx) * Texel_XY + dx * Texel_X1Y;
+	Spectrum Texel_Y = (1 - dx) * Texel_XY1 + dx * Texel_X1Y1;
+
+	Spectrum Texel = (1 - dy) * Texel_X + dy * Texel_Y;
+
+	return Texel; 
 }
 
 
 Spectrum sample_trilinear(HDR_Image const &base, std::vector< HDR_Image > const &levels, Vec2 uv, float lod) {
 	// A1T6: sample_trilinear
 	//TODO: implement trilinear sampling strategy on using mip-map 'levels'
+	int32_t lod0 = int32_t(std::floor(lod));
 
-	return sample_nearest(base, uv); //placeholder so image doesn't look blank
+	float lodMax = (float)std::log2(std::max(base.w, base.h));
+	lod0 = std::clamp(lod0, 0, int32_t(std::floor(lodMax)));
+
+	float dlod = lod - lod0;
+
+	Spectrum Texel_d = sample_bilinear(base, uv);
+	Spectrum Texel_d1 = sample_bilinear(base, uv);
+
+	if(lod0 < int32_t(std::floor(lodMax))){
+		Texel_d = (lod0 == 0 ? sample_bilinear(base, uv) : sample_bilinear(levels[lod0-1], uv));
+		Texel_d1 = sample_bilinear(levels[lod0], uv);
+	}else if(lod0 == 0 && lod0 == int32_t(std::floor(lodMax))){
+		Texel_d = sample_bilinear(base, uv);
+		Texel_d1 = Texel_d;
+	}else if(lod0 == int32_t(std::floor(lodMax))){
+		Texel_d = sample_bilinear(levels[lod0-1], uv);
+		Texel_d1 = Texel_d;
+	}
+
+	Spectrum Texel = (1 - dlod) * Texel_d + dlod * Texel_d1;
+
+	return Texel;
 }
 
 /*
@@ -90,7 +145,22 @@ void generate_mipmap(HDR_Image const &base, std::vector< HDR_Image > *levels_) {
 
 		// A1T6: generate
 		//TODO: Write code to fill the levels of the mipmap hierarchy by downsampling
-
+		assert(!(src.w == 1 && src.h == 1));
+		for(uint32_t j = 0; j < dst.h; j++){
+			for(uint32_t i = 0; i < dst.w; i++){
+				Spectrum Texel(0.0f, 0.0f, 0.0f);
+				if(src.w == 1 && src.h > 1){
+					Texel = (src.at(2*i,2*j) + src.at(2*i,2*j+1))/2.0f;
+				}
+				else if(src.w > 1 && src.h == 1){
+					Texel = (src.at(2*i,2*j) + src.at(2*i+1,2*j))/2.0f;
+				}
+				else if(src.w > 1 && src.h > 1){
+					Texel = (src.at(2*i,2*j) + src.at(2*i+1,2*j) + src.at(2*i,2*j+1) + src.at(2*i+1,2*j+1))/4.0f;
+				}
+				dst.at(i,j) = Texel;
+			}
+		}
 		//Be aware that the alignment of the samples in dst and src will be different depending on whether the image is even or odd.
 
 	};
