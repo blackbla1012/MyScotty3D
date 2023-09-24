@@ -38,21 +38,9 @@ Spectrum sample_bilinear(HDR_Image const &image, Vec2 uv) {
 	float dy = y - iy - 0.5f;
 
 	Spectrum Texel_XY = image.at(ix, iy);
-	Spectrum Texel_X1Y = Texel_XY;
-	Spectrum Texel_XY1 = Texel_XY;
-	Spectrum Texel_X1Y1 = Texel_XY1;
-
-	if(ix + 1 < (int32_t)image.w){
-		Texel_X1Y = image.at(ix + 1, iy);
-	}
-
-	if(iy + 1 < (int32_t)image.h){
-		Texel_XY1 = image.at(ix, iy + 1);
-	}
-
-	if(ix + 1 < (int32_t)image.w && iy + 1 < (int32_t)image.h){
-		Texel_X1Y1 = image.at(ix + 1, iy + 1);
-	}
+	Spectrum Texel_X1Y = (ix + 1 < (int32_t)image.w ? image.at(ix + 1, iy) : Texel_XY);
+	Spectrum Texel_XY1 = (iy + 1 < (int32_t)image.h ? image.at(ix, iy + 1) : Texel_XY);
+	Spectrum Texel_X1Y1 = (ix + 1 < (int32_t)image.w && iy + 1 < (int32_t)image.h ? image.at(ix + 1, iy + 1) : Texel_XY1);
 
 	Spectrum Texel_X = (1 - dx) * Texel_XY + dx * Texel_X1Y;
 	Spectrum Texel_Y = (1 - dx) * Texel_XY1 + dx * Texel_X1Y1;
@@ -79,10 +67,12 @@ Spectrum sample_trilinear(HDR_Image const &base, std::vector< HDR_Image > const 
 	if(lod0 < int32_t(std::floor(lodMax))){
 		Texel_d = (lod0 == 0 ? sample_bilinear(base, uv) : sample_bilinear(levels[lod0-1], uv));
 		Texel_d1 = sample_bilinear(levels[lod0], uv);
-	}else if(lod0 == 0 && lod0 == int32_t(std::floor(lodMax))){
+	}
+	else if(lod0 == 0 && lod0 == int32_t(std::floor(lodMax))){
 		Texel_d = sample_bilinear(base, uv);
 		Texel_d1 = Texel_d;
-	}else if(lod0 == int32_t(std::floor(lodMax))){
+	}
+	else if(lod0 == int32_t(std::floor(lodMax))){
 		Texel_d = sample_bilinear(levels[lod0-1], uv);
 		Texel_d1 = Texel_d;
 	}
