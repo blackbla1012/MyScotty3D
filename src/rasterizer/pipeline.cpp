@@ -674,6 +674,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			Pixel.fb_position.x = P_center.x;
 			Pixel.fb_position.y = P_center.y;
 			Pixel.fb_position.z = TriArea(acVec, aPVec)*vb.fb_position.z/TriFullS + TriArea(cbVec, cPVec)*va.fb_position.z/TriFullS + TriArea(baVec, bPVec)*vc.fb_position.z/TriFullS;
+			Pixel.derivatives.fill(Vec2(0.0f, 0.0f));
 
 			//initialize x+1 Pixel
 			Fragment PixelX_1;
@@ -684,13 +685,13 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			auto cPX_1Vec = Vec2(PixelX_1.fb_position.x - vc.fb_position.x, PixelX_1.fb_position.y - vc.fb_position.y);
 			if(CCW){
 				PixelX_1.fb_position.z = SignedTriArea(acVec, aPX_1Vec)*vb.fb_position.z/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.fb_position.z/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelX_1.attributes[i] = SignedTriArea(acVec, aPX_1Vec)*vb.attributes[i]/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.attributes[i]/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.attributes[i]/TriFullS;
 				}
 			}
 			else{
 				PixelX_1.fb_position.z = SignedTriArea(abVec, aPX_1Vec)*vc.fb_position.z/TriFullS + SignedTriArea(bcVec, bPX_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.fb_position.z/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelX_1.attributes[i] = SignedTriArea(abVec, aPX_1Vec)*vc.attributes[i]/TriFullS + SignedTriArea(bcVec, bPX_1Vec)*va.attributes[i]/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.attributes[i]/TriFullS;
 				}
 			}
@@ -704,22 +705,25 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			auto cPY_1Vec = Vec2(PixelY_1.fb_position.x - vc.fb_position.x, PixelY_1.fb_position.y - vc.fb_position.y);
 			if(CCW){
 				PixelY_1.fb_position.z = SignedTriArea(acVec, aPY_1Vec)*vb.fb_position.z/TriFullS + SignedTriArea(cbVec, cPY_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(baVec, bPY_1Vec)*vc.fb_position.z/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelY_1.attributes[i] = SignedTriArea(acVec, aPY_1Vec)*vb.attributes[i]/TriFullS + SignedTriArea(cbVec, cPY_1Vec)*va.attributes[i]/TriFullS + SignedTriArea(baVec, bPY_1Vec)*vc.attributes[i]/TriFullS;
 				}
 			}
 			else{
 				PixelY_1.fb_position.z = SignedTriArea(abVec, aPY_1Vec)*vc.fb_position.z/TriFullS + SignedTriArea(bcVec, bPY_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(caVec, cPY_1Vec)*vb.fb_position.z/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelY_1.attributes[i] = SignedTriArea(abVec, aPY_1Vec)*vc.attributes[i]/TriFullS + SignedTriArea(bcVec, bPY_1Vec)*va.attributes[i]/TriFullS + SignedTriArea(caVec, cPY_1Vec)*vb.attributes[i]/TriFullS;
 				}
 			}
 
-			for(int i = 0; i < va.attributes.size(); i++){
+			for(uint32_t i = 0; i < va.attributes.size(); i++){
 				Pixel.attributes[i] = TriArea(acVec, aPVec)*vb.attributes[i]/TriFullS + TriArea(cbVec, cPVec)*va.attributes[i]/TriFullS + TriArea(baVec, bPVec)*vc.attributes[i]/TriFullS;
-				Pixel.derivatives[i].x = PixelX_1.attributes[i] - Pixel.attributes[i];
-				Pixel.derivatives[i].y = PixelY_1.attributes[i] - Pixel.attributes[i];
 			}
+
+			for(uint32_t i = 0; i < Pixel.derivatives.size(); i++){
+				Pixel.derivatives[i] = Vec2(PixelX_1.attributes[i] - Pixel.attributes[i], PixelY_1.attributes[i] - Pixel.attributes[i]);
+			}
+
 			emit_fragment(Pixel);
 			return 0;
 		};
@@ -787,9 +791,10 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			Pixel.fb_position.x = P_center.x;
 			Pixel.fb_position.y = P_center.y;
 			Pixel.fb_position.z = TriArea(acVec, aPVec)*vb.fb_position.z/TriFullS + TriArea(cbVec, cPVec)*va.fb_position.z/TriFullS + TriArea(baVec, bPVec)*vc.fb_position.z/TriFullS;
+			Pixel.derivatives.fill(Vec2(0.0f, 0.0f));
 			//compute the 1/w value at the (x, y) pixel
 			float Pixel_w = TriArea(acVec, aPVec)*vb.inv_w/TriFullS + TriArea(cbVec, cPVec)*va.inv_w/TriFullS + TriArea(baVec, bPVec)*vc.inv_w/TriFullS;
-
+			
 			//initialize x+1 Fragment
 			Fragment PixelX_1;
 			PixelX_1.fb_position.x = P_center.x + 1;
@@ -801,7 +806,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				PixelX_1.fb_position.z = SignedTriArea(acVec, aPX_1Vec)*vb.fb_position.z/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.fb_position.z/TriFullS;
 				//compute the 1/w value at the (x+1, y) pixel
 				float PixelX_w = SignedTriArea(acVec, aPX_1Vec)*vb.inv_w/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.inv_w/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.inv_w/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelX_1.attributes[i] = (SignedTriArea(acVec, aPX_1Vec)*vb.attributes[i]*vb.inv_w/TriFullS + SignedTriArea(cbVec, cPX_1Vec)*va.attributes[i]*va.inv_w/TriFullS + SignedTriArea(baVec, bPX_1Vec)*vc.attributes[i]*vc.inv_w/TriFullS)/PixelX_w;
 				}
 			}
@@ -809,7 +814,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 				PixelX_1.fb_position.z = SignedTriArea(abVec, aPX_1Vec)*vc.fb_position.z/TriFullS + SignedTriArea(bcVec, bPX_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.fb_position.z/TriFullS;
 				//compute the 1/w value at the (x, y+1) pixel
 				float PixelX_w = SignedTriArea(abVec, aPX_1Vec)*vc.inv_w/TriFullS + SignedTriArea(bcVec, bPX_1Vec)*va.inv_w/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.inv_w/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelX_1.attributes[i] = (SignedTriArea(abVec, aPX_1Vec)*vc.attributes[i]*vc.inv_w + SignedTriArea(bcVec, bPX_1Vec)*va.attributes[i]*va.inv_w/TriFullS + SignedTriArea(caVec, cPX_1Vec)*vb.attributes[i]*vb.inv_w/TriFullS)/PixelX_w;
 				}
 			}
@@ -824,24 +829,27 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 			if(CCW){
 				PixelY_1.fb_position.z = SignedTriArea(acVec, aPY_1Vec)*vb.fb_position.z/TriFullS + SignedTriArea(cbVec, cPY_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(baVec, bPY_1Vec)*vc.fb_position.z/TriFullS;
 				float PixelY_w = SignedTriArea(acVec, aPY_1Vec)*vb.inv_w/TriFullS + SignedTriArea(cbVec, cPY_1Vec)*va.inv_w/TriFullS + SignedTriArea(baVec, bPY_1Vec)*vc.inv_w/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelY_1.attributes[i] = (SignedTriArea(acVec, aPY_1Vec)*vb.attributes[i]*vb.inv_w/TriFullS + SignedTriArea(cbVec, cPY_1Vec)*va.attributes[i]*va.inv_w/TriFullS + SignedTriArea(baVec, bPY_1Vec)*vc.attributes[i]*vc.inv_w/TriFullS)/PixelY_w;
 				}
 			}
 			else{
 				PixelY_1.fb_position.z = SignedTriArea(abVec, aPY_1Vec)*vc.fb_position.z/TriFullS + SignedTriArea(bcVec, bPY_1Vec)*va.fb_position.z/TriFullS + SignedTriArea(caVec, cPY_1Vec)*vb.fb_position.z/TriFullS;
 				float PixelY_w = SignedTriArea(abVec, aPY_1Vec)*vc.inv_w/TriFullS + SignedTriArea(bcVec, bPY_1Vec)*va.inv_w/TriFullS + SignedTriArea(caVec, cPY_1Vec)*vb.inv_w/TriFullS;
-				for(int i = 0; i < va.attributes.size(); i++){
+				for(uint32_t i = 0; i < va.attributes.size(); i++){
 					PixelY_1.attributes[i] = (SignedTriArea(abVec, aPY_1Vec)*vc.attributes[i]*vc.inv_w/TriFullS + SignedTriArea(bcVec, bPY_1Vec)*va.attributes[i]*va.inv_w/TriFullS + SignedTriArea(caVec, cPY_1Vec)*vb.attributes[i]*vb.inv_w/TriFullS)/PixelY_w;
 				}
 			}
 
 			//interpolate Fragment
-			for(int i = 0; i < va.attributes.size(); i++){
+			for(uint32_t i = 0; i < va.attributes.size(); i++){
 				Pixel.attributes[i] = (TriArea(acVec, aPVec)*vb.attributes[i]*vb.inv_w/TriFullS + TriArea(cbVec, cPVec)*va.attributes[i]*va.inv_w/TriFullS + TriArea(baVec, bPVec)*vc.attributes[i]*vc.inv_w/TriFullS)/Pixel_w;
-				Pixel.derivatives[i].x = PixelX_1.attributes[i] - Pixel.attributes[i];
-				Pixel.derivatives[i].y = PixelY_1.attributes[i] - Pixel.attributes[i];
 			}
+
+			for(uint32_t i = 0; i < Pixel.derivatives.size(); i++){
+				Pixel.derivatives[i] = Vec2(PixelX_1.attributes[i] - Pixel.attributes[i], PixelY_1.attributes[i] - Pixel.attributes[i]);
+			}
+
 			emit_fragment(Pixel);
 			return 0;
 		};
