@@ -62,25 +62,25 @@ checking that rasterizing the samplers scene will look decent.
 
 (##) A1T7 FINAL
 
-Insert a picture of your sample pattern here (up to you on how you created it):
 <div class="twentytwenty-container">
-    <img src="A1-writeup/reference/task7-sample-pattern.png" alt="Sample pattern">
+    <img src="A1-writeup/Sample_pattern.png" alt="Sample pattern">
 </div>
 
 Explanation of what your SamplePattern does and scenarios it would do well and poorly in:
 
-Your completion will be graded based on the above answer, the reference `test.a1.task7.cpp` file and 
-checking that rasterizing the samplers scene will look decent.
+My Sample Pattern has 4 samples in 1 pixel, and their reletive position to the pixel are: 
+(5/8,1/8), (1/8,3/8), (7/8,5/8), (3/8,7/8). This sample pattern can do well when the pixel is half covered by diagonal lines, 
+because it will present 50% coverage in that case. However, this sample pattern only has 4 different super samples, so it's ability of anti-aliasing is still not enough for most random cases.
+
 
 (##) RASTERIZED IMAGE FINAL
 
-Your image:
 <div class="twentytwenty-container">
-    <img src="A1-writeup/reference/rasterize_image.png" alt="Your creation">
+    <img src="A1-writeup/render.png" alt="Render Image">
 </div>
-Explanation of what it is and how you made it:
+These are 3 hearts in different transformations and texture. I imported the obj file of heart model and transform them into right position. I changed the color of the texture (tried image but it doesn't work well may be because of unmapped UV?) for different hearts. Finally I created a camera and use blend over, depth less for blending and depth test mode to render the image.
 
-Any free model sources you need to credit?
+Model Source: https://free3d.com/3d-model/heart-v1--539992.html
 
 (##) EXTRA CREDIT FINAL
 
