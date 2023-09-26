@@ -323,4 +323,3 @@ Test test_a1_task5_correct_persp("a1.task5.correct.persp", []() {
 		  CPFragment{ Vec3{ 2.5f, 0.5f, 0.5f }, {2.714285f}, { attrib0_deriv, Vec2{0.0f} } }}
 	);
 });
-
