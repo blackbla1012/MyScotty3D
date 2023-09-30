@@ -331,8 +331,53 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
  */
 std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	//A2L1: Flip Edge
-	
-    return std::nullopt;
+	if(e->on_boundary()){
+		return std::nullopt;
+	}
+
+	//collect data
+	HalfedgeRef h1 = e->halfedge;
+	HalfedgeRef h2 = h1->twin;
+	VertexRef v1 = h1->next->vertex;
+	VertexRef v2 = h2->next->vertex;
+	VertexRef v3 = h1->next->next->vertex;
+	VertexRef v4 = h2->next->next->vertex;
+	FaceRef f1 = h1->face;
+	FaceRef f2 = h2->face;
+
+	//find h1,h2's previews halfedge
+	HalfedgeRef h1Prev = h1;
+	while(h1Prev->next != h1){
+		h1Prev = h1Prev->next;
+		
+	}
+
+	HalfedgeRef h2Prev = h2;
+	while(h2Prev->next != h2){
+		h2Prev = h2Prev->next;
+	}
+
+	//disconnect
+	HalfedgeRef h1Next = h1->next;
+	HalfedgeRef h2Next = h2->next;
+	HalfedgeRef h1NextNext = h1->next->next;
+	HalfedgeRef h2NextNext = h2->next->next;
+	h1Prev->next = h2Next;
+	h2Prev->next = h1Next;
+	v1->halfedge = h1Next;
+	v2->halfedge = h2Next;
+
+	//reconnect
+	h1->vertex = v4;
+	h2->vertex = v3;
+	h1->next = h1NextNext;
+	h2->next = h2NextNext;
+	h1Next->next = h2;
+	h2Next->next = h1;
+	h1Next->face = f2;
+	h2Next->face = f1;
+
+    return e;
 }
 
 
