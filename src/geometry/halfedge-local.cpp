@@ -221,11 +221,217 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::bisect_edge(EdgeRef e) {
  */
 std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	// A2L2 (REQUIRED): split_edge
-	
-	(void)e; //this line avoids 'unused parameter' warnings. You can delete it as you fill in the function.
-    return std::nullopt;
-}
 
+	// Phase 1: collect existing elements
+	HalfedgeRef h = e->halfedge;
+	HalfedgeRef t = h->twin;
+	HalfedgeRef hNext = h->next;
+	HalfedgeRef tNext = t->next;
+	HalfedgeRef hNextNext = h->next->next;
+	HalfedgeRef tNextNext = t->next->next;
+	VertexRef v1 = h->vertex;
+	VertexRef v2 = t->vertex;
+	VertexRef v1Next = t->next->next->vertex;
+	VertexRef v2Next = h->next->next->vertex;
+
+	// Phase 2: Allocate new elements, set data
+	VertexRef vm = emplace_vertex();
+	vm->position = (v1->position + v2->position) / 2.0f;
+	interpolate_data({v1, v2}, vm); //set bone_weights
+
+	//new elements on edge e
+	EdgeRef e2 = emplace_edge();
+	e2->sharp = e->sharp; //copy sharpness flag
+
+	HalfedgeRef h2 = emplace_halfedge();
+	interpolate_data({h, h->next}, h2); //set corner_uv, corner_normal
+
+	HalfedgeRef t2 = emplace_halfedge();
+	interpolate_data({t, t->next}, t2); //set corner_uv, corner_normal
+	
+	if(e->on_boundary()){
+		//new elements on the new edge 1
+		EdgeRef eNew = emplace_edge();// the edge split face1
+		eNew->sharp = e->sharp;
+
+		HalfedgeRef hNew = emplace_halfedge();//halfedges on the new edge 1
+		HalfedgeRef tNew = emplace_halfedge();
+
+		FaceRef fNew = emplace_face();
+
+		// Phase 3: Reassign connectivity (careful about ordering so you don't overwrite values you may need later!)
+
+		vm->halfedge = h2;
+		e2->halfedge = h2;
+		assert(e->halfedge == h); //unchanged
+
+		fNew->halfedge = (h->face->boundary)?hNew:tNew;
+
+		if(h->face->boundary){
+			v1Next->halfedge = hNew;
+			eNew->halfedge = hNew;//end point hasn't been assigned
+			t->next->next = hNew;
+			tNext->face = fNew;
+			t->face->halfedge = t;
+		}
+		else{
+			v2Next->halfedge = tNew;
+			eNew->halfedge = tNew;//end point hasn't been assigned
+			h->next->next = tNew;
+			hNext->face = fNew;
+			h->face->halfedge = h;
+		}	
+
+		//h2, t2 start assigning
+		h2->twin = t;
+		h2->next = h->next;
+		h2->vertex = vm;
+		h2->edge = e2;
+		h2->face = (h->face->boundary)?h->face:fNew;
+
+		t2->twin = h;
+		t2->next = t->next;
+		t2->vertex = vm;
+		t2->edge = e;
+		t2->face = (h->face->boundary)?fNew:t->face;
+		
+		h->twin = t2;
+		h->next = (h->face->boundary)?h2:hNew;
+		assert(h->vertex == v1); // unchanged
+		assert(h->edge == e); // unchanged
+		//h->face unchanged
+
+		t->twin = h2;
+		t->next = (h->face->boundary)?tNew:t2;
+		assert(t->vertex == v2); // unchanged
+		t->edge = e2;
+		//t->face unchanged
+
+		//h_e1, t_e1, fNew1 start assigning
+		hNew->twin = tNew;
+		hNew->next = (h->face->boundary)?t2:hNextNext;
+		hNew->vertex = (h->face->boundary)?v1Next:vm;
+		hNew->edge = eNew;
+		hNew->face = (h->face->boundary)?fNew:h->face;
+
+		tNew->twin = hNew;
+		tNew->next = (h->face->boundary)?tNextNext:h2;
+		tNew->vertex = (h->face->boundary)?vm:v2Next;
+		tNew->edge = eNew;
+		tNew->face = (h->face->boundary)?t->face:fNew;
+
+		//validate
+		assert(tNextNext->face==t->face);
+		assert(hNextNext->face==h->face);
+		assert(tNextNext->next->face==t->face);
+		assert(hNextNext->next->face==h->face);
+		
+		// Phase 5: Return the correct iterator
+		return vm;
+	}
+	else{
+		//new elements on the new edge 1
+		EdgeRef eSf1 = emplace_edge();// the edge split face1
+		eSf1->sharp = e->sharp;
+
+		HalfedgeRef h_e1 = emplace_halfedge();//halfedges on the new edge 1
+		HalfedgeRef t_e1 = emplace_halfedge();
+
+		//new elements on the new edge2
+		EdgeRef eSf2 = emplace_edge();//the edge spit face2
+		eSf2->sharp = e->sharp;
+
+		HalfedgeRef h_e2 = emplace_halfedge();//halfedges on the new edge 2
+		HalfedgeRef t_e2 = emplace_halfedge();
+
+		//new 2 faces
+		FaceRef fNew1 = emplace_face();
+		FaceRef fNew2 = emplace_face(); 
+
+		// Phase 3: Reassign connectivity (careful about ordering so you don't overwrite values you may need later!)
+
+		vm->halfedge = h2;
+		e2->halfedge = h2;
+		assert(e->halfedge == h); //unchanged
+
+		fNew1->halfedge = h_e1;
+		fNew2->halfedge = h_e2;
+
+		v1Next->halfedge = h_e1;
+		eSf1->halfedge = h_e1;//end point hasn't been assigned
+		t->next->next = h_e1;
+
+		v2Next->halfedge = h_e2;
+		eSf2->halfedge = h_e2;//end point hasn't been assigned
+		h->next->next = h_e2;
+			
+		//h2, t2 start assigning
+		h2->twin = t;
+		h2->next = h->next;
+		h2->vertex = vm;
+		h2->edge = e2;
+		h2->face = fNew2;
+
+		t2->twin = h;
+		t2->next = t->next;
+		t2->vertex = vm;
+		t2->edge = e;
+		t2->face = fNew1;
+		
+		h->twin = t2;
+		h->next = t_e2;
+		assert(h->vertex == v1); // unchanged
+		assert(h->edge == e); // unchanged
+		//h->face unchanged
+
+		t->twin = h2;
+		t->next = t_e1;
+		assert(t->vertex == v2); // unchanged
+		t->edge = e2;
+		//t->face unchanged
+
+		//h_e1, t_e1, fNew1 start assigning
+		h_e1->twin = t_e1;
+		h_e1->next = t2;
+		h_e1->vertex = v1Next;
+		h_e1->edge = eSf1;
+		h_e1->face = fNew1;
+
+		t_e1->twin = h_e1;
+		t_e1->next = tNextNext;
+		t_e1->vertex = vm;
+		t_e1->edge = eSf1;
+		t_e1->face = t->face;
+
+		//h_e2, t_e2, fNew2 start assigning
+		h_e2->twin = t_e2;
+		h_e2->next = h2;
+		h_e2->vertex = v2Next;
+		h_e2->edge = eSf2;
+		h_e2->face = fNew2;
+
+		t_e2->twin = h_e2;
+		t_e2->next = hNextNext;
+		t_e2->vertex = vm;
+		t_e2->edge = eSf2;
+		t_e2->face = h->face;
+
+		hNext->face = fNew2;
+		tNext->face = fNew1;
+		//validate
+		assert(tNextNext->face==t->face);
+		assert(hNextNext->face==h->face);
+		assert(tNextNext->next->face==t->face);
+		assert(hNextNext->next->face==h->face);
+		assert(t2->face==fNew1);
+		assert(h2->face==fNew2);
+		assert(t_e1->face==t->face);
+		assert(h_e1->face==fNew1);
+		
+		// Phase 5: Return the correct iterator
+		return vm;
+	}
+}
 
 
 /*
