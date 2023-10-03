@@ -527,6 +527,9 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	//A2L4: Extrude Face
 	// Reminder: This function does not update the vertex positions.
 	// Remember to also fill in extrude_helper (A2L4h)
+	if(f->boundary){
+		return std::nullopt;
+	}
 	HalfedgeRef h = f->halfedge;
 	HalfedgeRef t = h->twin;
 
@@ -538,13 +541,15 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 		vNew->position = v->position;
 		interpolate_data({v}, vNew); //interpolate data
 
+		FaceRef fNew = emplace_face();
+		fNew->boundary = false;
+
 		EdgeRef eConnect = emplace_edge();
 		eConnect->sharp = h->edge->sharp;
 		HalfedgeRef hConnect = emplace_halfedge();
+		interpolate_data({hConnect, h}, hConnect);
 		HalfedgeRef tConnect = emplace_halfedge();
-
-		FaceRef fNew = emplace_face();
-		fNew->boundary = false;
+		interpolate_data({tConnect, t}, tConnect);
 		
 		EdgeRef eNew = emplace_edge();
 		eNew->sharp = h->edge->sharp;
@@ -748,6 +753,26 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 	FaceRef f_h = h->face;
 	FaceRef f_t = t->face;
 
+	//find hPrev & tPrev
+	uint32_t indexH = 0;
+	uint32_t indexT = 0;
+	HalfedgeRef hPrev = h;
+	while(hPrev->next != h){
+		hPrev = hPrev->next;
+		indexH++;
+	}
+
+	HalfedgeRef tPrev = t;
+	while(tPrev->next != t){
+		tPrev = tPrev->next;
+		indexT++;
+	}
+
+	//check triangle if its edges are all boundrary except the e edge
+	if((indexH < 3 && hPrev->twin->face->boundary && h->next->twin->face->boundary) || (indexT < 3 && tPrev->twin->face->boundary && t->next->twin->face->boundary)){
+		return std::nullopt;
+	}
+
 	//center point of edge e
 	VertexRef vm = emplace_vertex();
 	vm->position = (v1->position + v2->position) / 2.0f;
@@ -755,17 +780,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 	//reassign connectivity
 	vm->halfedge = h->next;
-
-	//find hPrev & tPrev
-	HalfedgeRef hPrev = h;
-	while(hPrev->next != h){
-		hPrev = hPrev->next;
-	}
-
-	HalfedgeRef tPrev = t;
-	while(tPrev->next != t){
-		tPrev = tPrev->next;
-	}
 
 	//reassign connectivity for v1
 	HalfedgeRef hi = h->twin->next;
@@ -785,9 +799,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 	tPrev->next = t->next;
 	f_h->halfedge = hPrev->next;
 	f_t->halfedge = tPrev->next;
-
-	//debug
-	//printf("id=%d,%d", h->id, t->id);
 
 	//Delete unused elements
 	uint32_t i = 1;
