@@ -110,3 +110,35 @@ Test test_a2_l3_collapse_edge_edge_boundary("a2.l3.collapse_edge.edge.boundary",
 
 	expect_collapse(mesh, edge, after);
 });
+
+Test test_a2_l3_collapse_edge_pyramid_bot_edge("a2.l3.collapse_edge.pyramid.bot.edge", []() {
+    Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces({
+        Vec3(0.0f, 0.0f, 4.0f), Vec3(2.0f, 2.0f, 0.0f),
+        Vec3(2.0f, -2.0f, 0.0f), Vec3(-2.0f, -2.0f, 0.0f),
+        Vec3(-2.0f, 2.0f, 0.0f)
+    }, {
+        {0, 2, 1},
+        {0, 1, 4},
+        {0, 4, 3},
+        {0, 3, 2},
+        {1, 2, 3, 4}
+    });
+
+
+    Halfedge_Mesh::EdgeRef edge = mesh.halfedges.begin()->next->edge;
+
+
+    Halfedge_Mesh after = Halfedge_Mesh::from_indexed_faces({
+            Vec3(0.0f, 0.0f, 4.0f),
+            Vec3(2.0f, 0.0f, 0.0f),
+            Vec3(-2.0f, -2.0f, 0.0f),Vec3(-2.0f,2.0f, 0.0f)
+    }, {
+        {0, 1, 3},
+        {0, 2, 1},
+        {0, 3, 2},
+        {1, 2, 3}
+    });
+
+
+    expect_collapse(mesh, edge, after);
+});

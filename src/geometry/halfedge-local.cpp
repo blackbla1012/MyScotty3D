@@ -519,9 +519,86 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	//A2L4: Extrude Face
 	// Reminder: This function does not update the vertex positions.
 	// Remember to also fill in extrude_helper (A2L4h)
+	HalfedgeRef h = f->halfedge;
+	HalfedgeRef t = h->twin;
 
-	(void)f;
-    return std::nullopt;
+	uint32_t number = 0;//vertex number of the polygon
+
+	do{
+		VertexRef v = h->vertex;
+		VertexRef vNew = emplace_vertex();
+		vNew->position = v->position;
+		interpolate_data({v}, vNew); //interpolate data
+
+		EdgeRef eConnect = emplace_edge();
+		eConnect->sharp = h->edge->sharp;
+		HalfedgeRef hConnect = emplace_halfedge();
+		HalfedgeRef tConnect = emplace_halfedge();
+
+		FaceRef fNew = emplace_face();
+		fNew->boundary = false;
+		
+		EdgeRef eNew = emplace_edge();
+		eNew->sharp = h->edge->sharp;
+		HalfedgeRef hNew = emplace_halfedge();
+		interpolate_data({h, h->next}, hNew);
+		HalfedgeRef tNew = emplace_halfedge();
+		interpolate_data({t, t->next}, tNew);
+
+		vNew->halfedge = hNew;
+
+		eConnect->halfedge = hConnect;
+
+		hConnect->twin = tConnect;
+		hConnect->edge = eConnect;
+		hConnect->vertex =vNew;
+		hConnect->face = fNew;
+		hConnect->next = h;
+
+		tConnect->twin = hConnect;
+		tConnect->edge = eConnect;
+		tConnect->vertex = v;//tConnect's face & next haven't been assigned
+
+		fNew->halfedge = hConnect;
+
+		eNew->halfedge = hNew;
+
+		hNew->twin = tNew;
+		hNew->vertex = vNew;
+		hNew->edge = eNew;
+		hNew->face = f;//hNew's next haven't been assigned
+
+		tNew->twin = hNew;
+		tNew->edge = eNew;
+		tNew->face = fNew;
+		tNew->next = hConnect;//tNew's vertex haven't been assigned
+
+		v->halfedge = tConnect;
+		h->face = fNew;//h's new next haven't been assigned
+		//f's new halfedge haven't been assigned
+		h = h->next;
+		number++;
+	}while(h != f->halfedge);
+	
+	h = f->halfedge;
+	VertexRef v = h->vertex;
+	HalfedgeRef hNew = v->halfedge->twin->vertex->halfedge;
+	
+	for(uint32_t i = 0; i < number; i++){
+		hNew->twin->vertex = h->next->vertex->halfedge->twin->vertex;//tNew's vertex have been assigned
+		hNew->next = hNew->twin->vertex->halfedge;//hNew's next have been assigned
+
+		h->next->vertex->halfedge->face = h->face;//tConnect's face have been assigned
+		h->next->vertex->halfedge->next = hNew->twin;//tConnect's next have been assigned
+
+		h->next = h->next->vertex->halfedge;//h's next have been assigned
+
+		hNew = hNew->next;
+		h = h->next->next->twin->next->twin->next->next;
+	}
+
+	f->halfedge = hNew;//f's new halfedge have been assigned
+    return f;
 }
 
 /*
@@ -643,8 +720,107 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 	//Reminder: use interpolate_data() to merge corner_uv / corner_normal data on halfedges
 	// (also works for bone_weights data on vertices!)
+	HalfedgeRef h = e->halfedge;
+	HalfedgeRef t = h->twin;
+	VertexRef v1 = h->vertex;
+	VertexRef v2 = t->vertex;
+	FaceRef f_h = h->face;
+	FaceRef f_t = t->face;
+
+	//center point of edge e
+	VertexRef vm = emplace_vertex();
+	vm->position = (v1->position + v2->position) / 2.0f;
+	interpolate_data({v1, v2}, vm); //set bone_weights
+
+	//reassign connectivity
+	vm->halfedge = h->next;
+
+	//find hPrev & tPrev
+	HalfedgeRef hPrev = h;
+	while(hPrev->next != h){
+		hPrev = hPrev->next;
+	}
+
+	HalfedgeRef tPrev = t;
+	while(tPrev->next != t){
+		tPrev = tPrev->next;
+	}
+
+	//reassign connectivity for v1
+	HalfedgeRef hi = h->twin->next;
+	while(hi != h){
+		hi->vertex = vm;
+		hi = hi->twin->next;
+	}
+
+	//reassign connectivity for v2
+	HalfedgeRef ti = t->twin->next;
+	while(ti != t){
+		ti->vertex = vm;
+		ti = ti->twin->next;
+	}
+
+	hPrev->next = h->next;
+	tPrev->next = t->next;
+	f_h->halfedge = hPrev->next;
+	f_t->halfedge = tPrev->next;
+
+	//debug
+	//printf("id=%d,%d", h->id, t->id);
+
+	//Delete unused elements
+	uint32_t i = 1;
+	uint32_t j = 1;
+	HalfedgeRef href = hPrev;
+	while(href->next != hPrev){
+		href = href->next;
+		i++;
+	}
+	HalfedgeRef tref = tPrev;
+	while(tref->next != tPrev){
+		tref = tref->next;
+		j++;
+	}
+	if(i<3){
+		hPrev->next->face = hPrev->twin->face;
+		hPrev->next->next = hPrev->twin->next;
+		hPrev->vertex->halfedge = hPrev->next->twin;
+		hPrev->twin->face->halfedge = hPrev->next;
+		HalfedgeRef hTPre = hPrev->twin;
+		while(hTPre->next != hPrev->twin){
+			hTPre = hTPre->next;
+		}
+		hTPre->next = hPrev->next;
+		erase_face(f_h);
+		erase_edge(hPrev->edge);
+		HalfedgeRef hPTwin = hPrev->twin;
+		erase_halfedge(hPrev);
+		erase_halfedge(hPTwin);
+	}
+	if(j<3){
+		tPrev->next->face = tPrev->twin->face;
+		tPrev->next->next = tPrev->twin->next;
+		tPrev->vertex->halfedge = tPrev->next->twin;
+		tPrev->twin->face->halfedge = tPrev->next;
+		HalfedgeRef tTPre = tPrev->twin;
+		while(tTPre->next != tPrev->twin){
+			tTPre = tTPre->next;
+		}
+		tTPre->next = tPrev->next;
+		erase_face(f_t);
+		erase_edge(tPrev->edge);
+		HalfedgeRef tPTwin = tPrev->twin;
+		erase_halfedge(tPrev);
+		erase_halfedge(tPTwin);
+	}
 	
-    return std::nullopt;
+    erase_halfedge(h);
+	erase_halfedge(t);
+	erase_vertex(v1);
+	erase_vertex(v2);
+	erase_edge(e);
+
+    return vm;
 }
 
 /*
@@ -735,6 +911,28 @@ void Halfedge_Mesh::extrude_positions(FaceRef face, Vec3 move, float shrink) {
 	// use mesh navigation to get starting positions from the surrounding faces,
 	// compute the centroid from these positions + use to shrink,
 	// offset by move
-	
+	HalfedgeRef h = face->halfedge;
+	auto TotalPosition = Vec3(0.0f,0.0f,0.0f);
+	uint32_t number = 0;
+	do{
+		VertexRef v = h->vertex;
+		TotalPosition += v->position;
+		number++;
+		h = h->next;
+	}while(h != face->halfedge);
+
+	VertexRef Center = emplace_vertex();
+	Center->position = TotalPosition/(float)number;
+
+	h = face->halfedge;
+	do{
+		VertexRef v = h->vertex;
+		Vec3 dPosition = v->position - Center->position;
+		v->position = Center->position + dPosition * (1-shrink);
+		v->position +=move;
+		h = h->next;
+	}while(h != face->halfedge);
+
+	erase_vertex(Center);
 }
 
