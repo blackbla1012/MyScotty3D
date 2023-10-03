@@ -320,13 +320,15 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		tNew->edge = eNew;
 		tNew->face = (h->face->boundary)?t->face:fNew;
 
+		t->face->halfedge = t;
+		h->face->halfedge = h;
+
 		//validate
 		assert(tNextNext->face==t->face);
 		assert(hNextNext->face==h->face);
 		assert(tNextNext->next->face==t->face);
 		assert(hNextNext->next->face==h->face);
 		
-		// Phase 5: Return the correct iterator
 		return vm;
 	}
 	else{
