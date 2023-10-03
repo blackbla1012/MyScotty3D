@@ -234,7 +234,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	VertexRef v1Next = t->next->next->vertex;
 	VertexRef v2Next = h->next->next->vertex;
 
-	//new elements
+	// Phase 2: Allocate new elements, set data
 	VertexRef vm = emplace_vertex();
 	vm->position = (v1->position + v2->position) / 2.0f;
 	interpolate_data({v1, v2}, vm); //set bone_weights
@@ -348,12 +348,24 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		FaceRef fNew1 = emplace_face();
 		FaceRef fNew2 = emplace_face(); 
 
-		//New elements assign connectivity
+		// Phase 3: Reassign connectivity (careful about ordering so you don't overwrite values you may need later!)
+
 		vm->halfedge = h2;
 		e2->halfedge = h2;
 		assert(e->halfedge == h); //unchanged
 
-		//h2, t2 assigning connectivity
+		fNew1->halfedge = h_e1;
+		fNew2->halfedge = h_e2;
+
+		v1Next->halfedge = h_e1;
+		eSf1->halfedge = h_e1;//end point hasn't been assigned
+		t->next->next = h_e1;
+
+		v2Next->halfedge = h_e2;
+		eSf2->halfedge = h_e2;//end point hasn't been assigned
+		h->next->next = h_e2;
+			
+		//h2, t2 start assigning
 		h2->twin = t;
 		h2->next = h->next;
 		h2->vertex = vm;
@@ -365,47 +377,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		t2->vertex = vm;
 		t2->edge = e;
 		t2->face = fNew1;
-
-		fNew1->halfedge = h_e1;
-		fNew2->halfedge = h_e2;
-
-		eSf1->halfedge = h_e1;
-		eSf2->halfedge = h_e2;
-
-		//h_e1, t_e1 assigning
-		h_e1->twin = t_e1;
-		h_e1->next = t2;
-		h_e1->vertex = v1Next;
-		h_e1->edge = eSf1;
-		h_e1->face = fNew1;
-
-		t_e1->twin = h_e1;
-		t_e1->next = tNextNext;
-		t_e1->vertex = vm;
-		t_e1->edge = eSf1;
-		t_e1->face = t->face;
-
-		//h_e2, t_e2 assigning
-		h_e2->twin = t_e2;
-		h_e2->next = h2;
-		h_e2->vertex = v2Next;
-		h_e2->edge = eSf2;
-		h_e2->face = fNew2;
-
-		t_e2->twin = h_e2;
-		t_e2->next = hNextNext;
-		t_e2->vertex = vm;
-		t_e2->edge = eSf2;
-		t_e2->face = h->face;
-
-		//reassign connectivity (change)
-		v1Next->halfedge = h_e1;
-		
-		t->next->next = h_e1;
-
-		v2Next->halfedge = h_e2;
-		
-		h->next->next = h_e2;
 		
 		h->twin = t2;
 		h->next = t_e2;
@@ -418,12 +389,35 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		assert(t->vertex == v2); // unchanged
 		t->edge = e2;
 		//t->face unchanged
-		
+
+		//h_e1, t_e1, fNew1 start assigning
+		h_e1->twin = t_e1;
+		h_e1->next = t2;
+		h_e1->vertex = v1Next;
+		h_e1->edge = eSf1;
+		h_e1->face = fNew1;
+
+		t_e1->twin = h_e1;
+		t_e1->next = tNextNext;
+		t_e1->vertex = vm;
+		t_e1->edge = eSf1;
+		t_e1->face = t->face;
+
+		//h_e2, t_e2, fNew2 start assigning
+		h_e2->twin = t_e2;
+		h_e2->next = h2;
+		h_e2->vertex = v2Next;
+		h_e2->edge = eSf2;
+		h_e2->face = fNew2;
+
+		t_e2->twin = h_e2;
+		t_e2->next = hNextNext;
+		t_e2->vertex = vm;
+		t_e2->edge = eSf2;
+		t_e2->face = h->face;
+
 		hNext->face = fNew2;
 		tNext->face = fNew1;
-
-		h->face->halfedge = h;
-		t->face->halfedge = t;
 		//validate
 		assert(tNextNext->face==t->face);
 		assert(hNextNext->face==h->face);
@@ -625,59 +619,46 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	}
 
 	//collect data
-	HalfedgeRef h = e->halfedge;
-	HalfedgeRef t = h->twin;
-	VertexRef vh = h->vertex;
-	VertexRef vt = t->vertex;
-	VertexRef vhNew = t->next->next->vertex;
-	VertexRef vtNew = h->next->next->vertex;
-	FaceRef fh = h->face;
-	FaceRef ft = t->face;
+	HalfedgeRef h1 = e->halfedge;
+	HalfedgeRef h2 = h1->twin;
+	VertexRef v1 = h1->next->vertex;
+	VertexRef v2 = h2->next->vertex;
+	VertexRef v3 = h1->next->next->vertex;
+	VertexRef v4 = h2->next->next->vertex;
+	FaceRef f1 = h1->face;
+	FaceRef f2 = h2->face;
 
-	//find h,ts previews halfedge
-	HalfedgeRef hPrev = h;
-	while(hPrev->next != h){
-		hPrev = hPrev->next;
+	//find h1,h2's previews halfedge
+	HalfedgeRef h1Prev = h1;
+	while(h1Prev->next != h1){
+		h1Prev = h1Prev->next;
 		
 	}
 
-	HalfedgeRef tPrev = t;
-	while(tPrev->next != t){
-		tPrev = tPrev->next;
+	HalfedgeRef h2Prev = h2;
+	while(h2Prev->next != h2){
+		h2Prev = h2Prev->next;
 	}
 
 	//disconnect
-	hPrev->next = t->next;
-	tPrev->next = h->next;
-	vh->halfedge = t->next;
-	vt->halfedge = h->next;
-	
+	HalfedgeRef h1Next = h1->next;
+	HalfedgeRef h2Next = h2->next;
+	HalfedgeRef h1NextNext = h1->next->next;
+	HalfedgeRef h2NextNext = h2->next->next;
+	h1Prev->next = h2Next;
+	h2Prev->next = h1Next;
+	v1->halfedge = h1Next;
+	v2->halfedge = h2Next;
+
 	//reconnect
-	vhNew->halfedge = h;
-	vtNew->halfedge = t;
-
-	fh->halfedge = h;
-	ft->halfedge = t;
-
-	HalfedgeRef hNextNext = h->next->next;
-	HalfedgeRef tNextNext = t->next->next;
-
-	h->next->next = t;
-	t->next->next = h;
-	h->next->face = ft;
-	t->next->face = fh;
-
-	h->vertex = vhNew;
-	t->vertex = vtNew;
-	h->next = hNextNext;
-	t->next = tNextNext;
-	//unchanged
-	assert(h->face == fh);
-	assert(h->edge == e);
-	assert(h->twin == t);
-	assert(t->face == ft);
-	assert(t->edge == e);
-	assert(t->twin == h);
+	h1->vertex = v4;
+	h2->vertex = v3;
+	h1->next = h1NextNext;
+	h2->next = h2NextNext;
+	h1Next->next = h2;
+	h2Next->next = h1;
+	h1Next->face = f2;
+	h2Next->face = f1;
 
     return e;
 }

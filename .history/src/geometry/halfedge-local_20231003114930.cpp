@@ -418,12 +418,10 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		assert(t->vertex == v2); // unchanged
 		t->edge = e2;
 		//t->face unchanged
+
 		
 		hNext->face = fNew2;
 		tNext->face = fNew1;
-
-		h->face->halfedge = h;
-		t->face->halfedge = t;
 		//validate
 		assert(tNextNext->face==t->face);
 		assert(hNextNext->face==h->face);
