@@ -13,7 +13,91 @@
  */
 void Halfedge_Mesh::triangulate() {
 	//A2G1: triangulation
-	
+	uint32_t FaceNum = 0;
+	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
+		if(f->boundary){
+			continue;
+		}
+		FaceNum++;
+	}
+
+	FaceRef f = faces.begin();
+	if(f->boundary){
+		f++;
+	}
+	for (u_int32_t x = 0 ; x < FaceNum; x++) {
+		HalfedgeRef h = f->halfedge;
+		VertexRef v = h->vertex;
+
+		HalfedgeRef hIndex = h;
+		uint32_t number = 0;
+		do{
+			number++;
+			hIndex = hIndex->next;
+		}while(hIndex != h);
+
+		if(number == 3){
+			f++;
+			continue;
+		}
+
+		assert(hIndex == h);
+
+		hIndex = h->next;
+		for(uint32_t i = 0; i < (number-3); i++){
+			EdgeRef eNew = emplace_edge();
+			HalfedgeRef hNew = emplace_halfedge();
+			HalfedgeRef tNew = emplace_halfedge();
+			FaceRef fNew = emplace_face();
+
+			//assign properties
+			eNew->sharp = h->edge->sharp;
+			fNew->boundary = f->boundary;
+			interpolate_data({h, hIndex}, hNew); //set corner_uv, corner_normal
+			interpolate_data({h, hIndex}, tNew); //set corner_uv, corner_normal
+			//assign connectivity
+			eNew->halfedge = hNew;
+			fNew->halfedge = hNew;
+
+			hNew->twin = tNew;
+			hNew->edge = eNew;
+			hNew->face = fNew;
+			hNew->vertex = hIndex->next->vertex;//hNew's next haven't been assigned
+
+			tNew->twin = hNew;
+			tNew->edge = eNew;
+			tNew->vertex = v;
+			tNew->next = hIndex->next;//tNew's face haven't been assigned
+			//reassign connectivity
+			HalfedgeRef hIndexNext = hIndex->next;
+			hIndex->next = hNew;
+			hIndex->face = fNew;
+
+			if(i==0){
+				h->face = fNew; 
+				hNew->next = h;
+			}
+
+			hIndex = hIndexNext;
+		}
+
+		//reassign connectivity
+		f->halfedge = hIndex;
+		FaceRef fSet = h->face;
+		HalfedgeRef hSet = fSet->halfedge;
+		HalfedgeRef tSet = hSet->twin;
+
+		for(uint32_t j = 0; j < (number-3); j++){
+			hSet->twin->face = hSet->twin->next->face;
+			if(j != 0){
+				hSet->next = tSet;
+			}
+			HalfedgeRef tSet = hSet->twin;
+			hSet = tSet->next->next;
+		}
+		hSet->next = tSet;
+		f++;
+	}
 }
 
 /*
@@ -29,21 +113,41 @@ void Halfedge_Mesh::linear_subdivide() {
 	std::unordered_map< FaceCRef, Vec3 > face_vertex_positions;
 
 	//A2G2: linear subdivision
-
 	// For every vertex, assign its current position to vertex_positions[v]:
+	for(VertexCRef v = vertices.begin(); v != vertices.end(); v++){
+		vertex_positions[v] = v->position;
+	}
 
-	//(TODO)
-
-    // For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
+	// For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Edge)
+	for(EdgeCRef e = edges.begin(); e != edges.end(); e++){
+		HalfedgeRef h = e->halfedge;
+		HalfedgeRef t = h->twin;
+		VertexRef vh = h->vertex;
+		VertexRef vt = t->vertex;
 
-	//(TODO)
+		edge_vertex_positions[e] = 0.5f * (vh->position + vt->position);
+	}
 
-    // For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
+	// For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Face)
+	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
+		if(f->boundary){
+			continue;
+		}
+		HalfedgeRef h = f->halfedge;
+		Vec3 pSum = Vec3(0.0f, 0.0f, 0.0f);
+		uint32_t num = 0;
+		HalfedgeRef hIndex = h;
+		do{
+			VertexRef v = hIndex->vertex;
+			pSum += v->position;
+			num++;
+			hIndex = hIndex->next;
+		}while(hIndex != h);
 
-	//(TODO)
-
+		face_vertex_positions[f] = pSum / (float)num;
+	}
 
 	//use the helper function to actually perform the subdivision:
 	catmark_subdivide_helper(vertex_positions, edge_vertex_positions, face_vertex_positions);
@@ -64,19 +168,76 @@ void Halfedge_Mesh::catmark_subdivide() {
 
 	//A2G3: Catmull-Clark Subdivision
 
-	// This routine should end up looking a lot like linear_subdivide
-	// above, with the exception that the positions are a bit trickier
-	// to compute.
-
-	//Overview of the rules:
-	// https://en.wikipedia.org/wiki/Catmull%E2%80%93Clark_subdivision_surface
-
 	// Faces
+	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
+		if(f->boundary){
+			continue;
+		}
+		HalfedgeRef h = f->halfedge;
+		Vec3 pSum = Vec3(0.0f, 0.0f, 0.0f);
+		uint32_t num = 0;
+		HalfedgeRef hIndex = h;
+		do{
+			VertexRef v = hIndex->vertex;
+			pSum += v->position;
+			num++;
+			hIndex = hIndex->next;
+		}while(hIndex != h);
+
+		face_vertex_positions[f] = pSum / (float)num;
+	}
 
 	// Edges
+	for(EdgeCRef e = edges.begin(); e != edges.end(); e++){
+		HalfedgeRef h = e->halfedge;
+		HalfedgeRef t = h->twin;
+		VertexRef vh = h->vertex;
+		VertexRef vt = t->vertex;
+
+		if(h->face->boundary || t->face->boundary){
+			edge_vertex_positions[e] = 0.5f * (vh->position + vt->position);
+		}
+		else{
+			edge_vertex_positions[e] = 0.25f * (vh->position + vt->position + face_vertex_positions[h->face] + face_vertex_positions[t->face]);
+		}
+	}
 
 	// Vertices
+	for(VertexCRef v = vertices.begin(); v != vertices.end(); v++){
+		bool isBoundary = false;
+		HalfedgeRef h = v->halfedge;
+		HalfedgeRef hIndex = h;
+		uint32_t degree = 0;
+		do{
+			if(hIndex->face->boundary || hIndex->twin->face->boundary){
+				isBoundary = true;
+			}
+			degree++;
+			hIndex = hIndex->twin->next;
+		}while(hIndex != h);
 
+		assert(hIndex == h);
+		Vec3 pSum = Vec3(0.0f, 0.0f, 0.0f);
+
+		if(isBoundary){
+			do{
+				if(hIndex->face->boundary || hIndex->twin->face->boundary){
+					pSum += 0.125f * hIndex->twin->vertex->position;
+				}
+				hIndex = hIndex->twin->next;
+			}while(hIndex != h);
+			pSum += 0.75f * v->position;
+		}
+		else{
+			do{
+				pSum += (face_vertex_positions[hIndex->face] + hIndex->twin->vertex->position) / (float)(degree*degree);
+				hIndex = hIndex->twin->next;
+			}while(hIndex != h);
+			pSum += v->position * (1.0f - 2.0f / (float)degree);
+		}
+
+		vertex_positions[v] = pSum;
+	}
 	
 	//Now, use the provided helper function to actually perform the subdivision:
 	catmark_subdivide_helper(vertex_positions, edge_vertex_positions, face_vertex_positions);

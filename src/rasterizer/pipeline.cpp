@@ -492,8 +492,6 @@ void Pipeline<p, P, flags>::rasterize_line(
 	}
 }
 
-
-
 /*
  * rasterize_triangle(a,b,c,emit) calls 'emit(frag)' at every location
  *  	(x+0.5,y+0.5) (where x,y are integers) covered by triangle (a,b,c).
@@ -670,7 +668,7 @@ void Pipeline<p, P, flags>::rasterize_triangle(
 		}
 
 		//set fragment function - smooth
-		auto SetFragment = [&TriArea, &SignedTriArea](Fragment Pixel, Vec2 P_center, Vec2 aPVec, Vec2 bPVec, Vec2 cPVec, Vec2 acVec, Vec2 cbVec, Vec2 baVec, Vec2 abVec, Vec2 bcVec, Vec2 caVec, bool CCW, ClippedVertex const& va, ClippedVertex const& vb, ClippedVertex const& vc, float TriFullS, std::function<void(Fragment const&)> const& emit_fragment) {
+		auto SetFragment = [&TriArea](Fragment Pixel, Vec2 P_center, Vec2 aPVec, Vec2 bPVec, Vec2 cPVec, Vec2 acVec, Vec2 cbVec, Vec2 baVec, Vec2 abVec, Vec2 bcVec, Vec2 caVec, bool CCW, ClippedVertex const& va, ClippedVertex const& vb, ClippedVertex const& vc, float TriFullS, std::function<void(Fragment const&)> const& emit_fragment) {
 			Pixel.fb_position.x = P_center.x;
 			Pixel.fb_position.y = P_center.y;
 			Pixel.fb_position.z = TriArea(acVec, aPVec)*vb.fb_position.z/TriFullS + TriArea(cbVec, cPVec)*va.fb_position.z/TriFullS + TriArea(baVec, bPVec)*vc.fb_position.z/TriFullS;
