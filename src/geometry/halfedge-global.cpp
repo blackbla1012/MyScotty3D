@@ -113,13 +113,20 @@ void Halfedge_Mesh::linear_subdivide() {
 	std::unordered_map< FaceCRef, Vec3 > face_vertex_positions;
 
 	//A2G2: linear subdivision
+
 	// For every vertex, assign its current position to vertex_positions[v]:
 	for(VertexCRef v = vertices.begin(); v != vertices.end(); v++){
 		vertex_positions[v] = v->position;
 	}
 
 	// For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
+	// For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Edge)
+	for(EdgeCRef e = edges.begin(); e != edges.end(); e++){
+		HalfedgeRef h = e->halfedge;
+		HalfedgeRef t = h->twin;
+		VertexRef vh = h->vertex;
+		VertexRef vt = t->vertex;
 	for(EdgeCRef e = edges.begin(); e != edges.end(); e++){
 		HalfedgeRef h = e->halfedge;
 		HalfedgeRef t = h->twin;
@@ -128,9 +135,29 @@ void Halfedge_Mesh::linear_subdivide() {
 
 		edge_vertex_positions[e] = 0.5f * (vh->position + vt->position);
 	}
+		edge_vertex_positions[e] = 0.5f * (vh->position + vt->position);
+	}
 
 	// For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
+	// For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Face)
+	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
+		if(f->boundary){
+			continue;
+		}
+		HalfedgeRef h = f->halfedge;
+		Vec3 pSum = Vec3(0.0f, 0.0f, 0.0f);
+		uint32_t num = 0;
+		HalfedgeRef hIndex = h;
+		do{
+			VertexRef v = hIndex->vertex;
+			pSum += v->position;
+			num++;
+			hIndex = hIndex->next;
+		}while(hIndex != h);
+
+		face_vertex_positions[f] = pSum / (float)num;
+	}
 	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
 		if(f->boundary){
 			continue;
@@ -169,6 +196,23 @@ void Halfedge_Mesh::catmark_subdivide() {
 	//A2G3: Catmull-Clark Subdivision
 
 	// Faces
+	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
+		if(f->boundary){
+			continue;
+		}
+		HalfedgeRef h = f->halfedge;
+		Vec3 pSum = Vec3(0.0f, 0.0f, 0.0f);
+		uint32_t num = 0;
+		HalfedgeRef hIndex = h;
+		do{
+			VertexRef v = hIndex->vertex;
+			pSum += v->position;
+			num++;
+			hIndex = hIndex->next;
+		}while(hIndex != h);
+
+		face_vertex_positions[f] = pSum / (float)num;
+	}
 	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
 		if(f->boundary){
 			continue;
