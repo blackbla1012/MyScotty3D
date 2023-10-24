@@ -120,44 +120,18 @@ void Halfedge_Mesh::linear_subdivide() {
 	}
 
 	// For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
-	// For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Edge)
 	for(EdgeCRef e = edges.begin(); e != edges.end(); e++){
 		HalfedgeRef h = e->halfedge;
 		HalfedgeRef t = h->twin;
 		VertexRef vh = h->vertex;
 		VertexRef vt = t->vertex;
-	for(EdgeCRef e = edges.begin(); e != edges.end(); e++){
-		HalfedgeRef h = e->halfedge;
-		HalfedgeRef t = h->twin;
-		VertexRef vh = h->vertex;
-		VertexRef vt = t->vertex;
 
 		edge_vertex_positions[e] = 0.5f * (vh->position + vt->position);
 	}
-		edge_vertex_positions[e] = 0.5f * (vh->position + vt->position);
-	}
 
-	// For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
 	// For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Face)
-	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
-		if(f->boundary){
-			continue;
-		}
-		HalfedgeRef h = f->halfedge;
-		Vec3 pSum = Vec3(0.0f, 0.0f, 0.0f);
-		uint32_t num = 0;
-		HalfedgeRef hIndex = h;
-		do{
-			VertexRef v = hIndex->vertex;
-			pSum += v->position;
-			num++;
-			hIndex = hIndex->next;
-		}while(hIndex != h);
-
-		face_vertex_positions[f] = pSum / (float)num;
-	}
 	for(FaceCRef f = faces.begin(); f != faces.end(); f++){
 		if(f->boundary){
 			continue;
