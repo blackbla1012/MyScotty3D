@@ -714,8 +714,84 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::make_boundary(FaceRef face)
  */
 std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::dissolve_vertex(VertexRef v) {
 	// A2Lx1 (OPTIONAL): Dissolve Vertex
+	HalfedgeRef h = v->halfedge;
+	FaceRef fh = h->face;
+	uint32_t degree = 0;
+	HalfedgeRef hIndex = h;
+	do{
+		if(hIndex->face->boundary || hIndex->twin->face->boundary){
+			return std::nullopt;
+		}
+		degree++;
+		hIndex = hIndex->twin->next;
+	}while(hIndex != h);
 
-    return std::nullopt;
+	assert(hIndex == h);
+	fh->halfedge = h->next;
+
+	for(uint32_t i = 0; i < degree; i++){
+		if(i != (degree - 1)){
+			HalfedgeRef hTNext = hIndex->twin->next;
+			HalfedgeRef hNext = hIndex->next;
+			HalfedgeRef tIndex = hIndex->twin;
+			FaceRef ft = tIndex->face;
+			EdgeRef eIndex = hIndex->edge;
+
+			HalfedgeRef hPrev = hIndex;
+			while(hPrev->next != hIndex){
+				hPrev = hPrev->next;
+				assert(hPrev->face == fh); 
+			}
+			assert(hPrev->next == hIndex);
+
+			HalfedgeRef tPrev = tIndex;
+			while(tPrev->next != tIndex){
+				tPrev = tPrev->next;
+				tPrev->face = fh;
+			}
+
+			tIndex->vertex->halfedge = hIndex->next;
+
+			hPrev->next = tIndex->next;
+			tPrev->next = hNext;
+			HalfedgeRef hErase = hIndex;
+			hIndex = hTNext;
+
+			erase_halfedge(hErase);
+			erase_halfedge(tIndex);
+			erase_face(ft);
+			erase_edge(eIndex);
+		}else{
+			HalfedgeRef hNext = hIndex->next;
+			HalfedgeRef tIndex = hIndex->twin;
+			EdgeRef eIndex = hIndex->edge;
+
+			HalfedgeRef hPrev = hIndex;
+			while(hPrev->next != hIndex){
+				hPrev = hPrev->next;
+			}
+			assert(hPrev->next == hIndex);
+
+			HalfedgeRef tPrev = tIndex;
+			while(tPrev->next != tIndex){
+				tPrev = tPrev->next;
+				tPrev->face = fh;
+			}
+			assert(tPrev->next == tIndex);
+
+			hIndex->vertex->halfedge = tIndex->next;
+			tIndex->vertex->halfedge = hIndex->next;
+
+			tPrev->next = hNext;
+
+			erase_halfedge(hIndex);
+			erase_halfedge(tIndex);
+			erase_edge(eIndex);
+		}
+	}
+	
+	erase_vertex(v);
+    return fh;
 }
 
 /*
@@ -731,8 +807,42 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::dissolve_edge(EdgeRef e) {
 	// A2Lx2 (OPTIONAL): dissolve_edge
 
 	//Reminder: use interpolate_data() to merge corner_uv / corner_normal data
+	if(e->on_boundary()){
+		return std::nullopt;
+	}
+	HalfedgeRef h = e->halfedge;
+	HalfedgeRef t = h->twin;
+	FaceRef fh = h->face;
+	FaceRef ft = t->face;
+
+	HalfedgeRef hPrev = h;
+	while(hPrev->next != h){
+		hPrev = hPrev->next;
+	}
+	assert(hPrev->next == h);
+
+	HalfedgeRef tPrev = t;
+	while(tPrev->next != t){
+		tPrev = tPrev->next;
+		tPrev->face = fh;
+	}
+	assert(tPrev->next == t);
+
+	h->vertex->halfedge = t->next;
+	t->vertex->halfedge = h->next;
+
+	fh->halfedge = h->next;
+	ft->halfedge = t->next;
+
+	hPrev->next = t->next;
+	tPrev->next = h->next;
+
+	erase_halfedge(h);
+	erase_halfedge(t);
+	erase_face(ft);
+	erase_edge(e);
 	
-    return std::nullopt;
+    return fh;
 }
 
 /* collapse_edge: collapse edge to a vertex at its middle

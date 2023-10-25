@@ -46,8 +46,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/yunqi/Scotty3D",
-      "program": "c:/Users/yunqi/Scotty3D/build/Debug/outDebug",
+      "cwd": "c:/Users/yunqi/Scotty3D/src/geometry",
+      "program": "c:/Users/yunqi/Scotty3D/src/geometry/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
