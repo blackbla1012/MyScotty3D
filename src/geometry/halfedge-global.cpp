@@ -26,6 +26,11 @@ void Halfedge_Mesh::triangulate() {
 		f++;
 	}
 	for (uint32_t x = 0 ; x < FaceNum; x++) {
+		if (f->halfedge->next->next->next == f->halfedge || f->boundary) {
+			f++;
+			continue;
+		}
+
 		HalfedgeRef h = f->halfedge;
 		VertexRef v = h->vertex;
 
@@ -35,11 +40,6 @@ void Halfedge_Mesh::triangulate() {
 			number++;
 			hIndex = hIndex->next;
 		}while(hIndex != h);
-
-		if(number == 3){
-			f++;
-			continue;
-		}
 
 		assert(hIndex == h);
 
