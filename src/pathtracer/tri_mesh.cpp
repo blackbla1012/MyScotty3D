@@ -32,16 +32,32 @@ Trace Triangle::hit(const Ray& ray) const {
 
     // TODO (PathTracer): Task 2
     // Intersect the ray with the triangle defined by the three vertices.
+	Vec3 s = ray.point - v_0.position;
+	Vec3 e1 = v_1.position - v_0.position;
+	Vec3 e2 = v_2.position - v_0.position;
+
+	float u = -1.0f * dot(cross(s, e2), ray.dir) / dot(cross(e1, ray.dir), e2);
+	float v = dot(cross(e1, ray.dir), s) / dot(cross(e1, ray.dir), e2);
+	float t = -1.0f * dot(cross(s, e2), e1) / dot(cross(e1, ray.dir), e2);
 
     Trace ret;
     ret.origin = ray.point;
-    ret.hit = false;       // was there an intersection?
-    ret.distance = 0.0f;   // at what distance did the intersection occur?
-    ret.position = Vec3{}; // where was the intersection?
-    ret.normal = Vec3{};   // what was the surface normal at the intersection?
-                           // (this should be interpolated between the three vertex normals)
-	ret.uv = Vec2{};	   // What was the uv associated with the point of intersection?
-						   // (this should be interpolated between the three vertex uvs)
+	if( u >= 0 && v >= 0 && (u + v) <= 1 && t >= ray.dist_bounds.x && t <= ray.dist_bounds.y){
+		ret.hit = true; 
+		ret.distance = t;
+		ret.position = ray.at(ret.distance);
+		ret.normal = u * v_1.normal + v * v_2.normal + (1 - u - v) * v_0.normal;
+		ret.uv = u * v_1.uv + v * v_2.uv + (1 - u - v) * v_0.uv;
+	}else{
+		ret.hit = false;       // was there an intersection?
+		ret.distance = 0.0f;   // at what distance did the intersection occur?
+		ret.position = Vec3{}; // where was the intersection?
+		ret.normal = Vec3{};   // what was the surface normal at the intersection?
+							// (this should be interpolated between the three vertex normals)
+		ret.uv = Vec2{};	   // What was the uv associated with the point of intersection?
+							// (this should be interpolated between the three vertex uvs)
+	}
+   
     return ret;
 }
 
