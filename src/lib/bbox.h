@@ -85,7 +85,43 @@ struct BBox {
 		// If the ray intersected the bounding box within the range given by
 		// [times.x,times.y], update times with the new intersection times.
 
-		return false;
+		Vec3 invdir = 1.0f / ray.dir;
+		std::vector<uint32_t> sign;
+		sign.reserve(3);
+		sign[0] = (uint32_t)(invdir.x < 0);
+		sign[1] = (uint32_t)(invdir.y < 0);
+		sign[2] = (uint32_t)(invdir.z < 0);
+
+		std::vector<Vec3> bounds;
+		bounds.reserve(2);
+		bounds[0] = min;
+		bounds[1] = max;
+		
+		float tmin, tmax, tymin, tymax, tzmin, tzmax;
+
+		tmin = (bounds[sign[0]].x - ray.point.x) * invdir.x;
+		tmax = (bounds[1-sign[0]].x - ray.point.x) * invdir.x;
+		tymin = (bounds[sign[1]].y - ray.point.y) * invdir.y;
+		tymax = (bounds[1-sign[1]].y - ray.point.y) * invdir.y;
+
+		if((tmin > tymax) || (tymin > tmax)) return false;
+
+		if(tymin > tmin) tmin = tymin;
+		if(tymax < tmax) tmax = tymax;
+
+		tzmin = (bounds[sign[2]].z - ray.point.z) * invdir.z;
+		tzmax = (bounds[1-sign[2]].z - ray.point.z) * invdir.z;
+
+		if((tmin > tzmax) || (tzmin > tmax)) return false;
+
+		if (tzmin > tmin) tmin = tzmin;
+		if (tzmax < tmax) tmax = tzmax;
+
+		if(times.x > times.y) std::swap(times.x, times.y);
+
+		if(times.x > tmax || times.y < tmin || ray.dist_bounds.x > tmax || ray.dist_bounds.y < tmin) return false;
+
+		return true;
 	}
 
 	/// Get the eight corner points of the bounding box
