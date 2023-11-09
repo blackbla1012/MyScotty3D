@@ -119,9 +119,13 @@ struct BBox {
 
 		if(times.x > times.y) std::swap(times.x, times.y);
 
-		if(times.x > tmax || times.y < tmin || ray.dist_bounds.x > tmax || ray.dist_bounds.y < tmin) return false;
-
-		return true;
+		if(times.x > tmax || times.y < tmin) return false;
+		else
+		{
+			times.x = std::max(times.x, tmin);
+			times.y = std::min(times.y, tmax);
+			return true;
+		}
 	}
 
 	/// Get the eight corner points of the bounding box

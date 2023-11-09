@@ -63,7 +63,7 @@ Trace Triangle::hit(const Ray& ray) const {
 		ret.uv = u * v_1.uv + v * v_2.uv + (1 - u - v) * v_0.uv;
 	}else{
 		ret.hit = false;       // was there an intersection?
-		ret.distance = 0.0f;   // at what distance did the intersection occur?
+		ret.distance = FLT_MAX;   // at what distance did the intersection occur?
 		ret.position = Vec3{}; // where was the intersection?
 		ret.normal = Vec3{};   // what was the surface normal at the intersection?
 							// (this should be interpolated between the three vertex normals)

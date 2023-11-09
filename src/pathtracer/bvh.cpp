@@ -32,7 +32,76 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
     // Construct a BVH from the given vector of primitives and maximum leaf
     // size configuration.
 
-	//TODO
+	std::function<void(size_t)> SAH_helper;
+	
+	SAH_helper = [&](size_t node){
+		
+		if (nodes[node].size <= max_leaf_size)
+		{
+			return;
+		}
+
+		//Node PNode = nodes[node_index];
+		float SAH_min = FLT_MAX;
+		size_t index_min = size_t(-1);
+		int best_axis = -1;
+		for(int axis = 0; axis < 3; axis++)
+		{
+
+			std::sort(primitives.begin() + nodes[node].start, primitives.begin() + nodes[node].start + nodes[node].size,
+									[axis](const Primitive &a, const Primitive &b)
+									{ return a.bbox().center()[axis] < b.bbox().center()[axis];});
+
+			for(size_t i = nodes[node].start + 1; i < nodes[node].start + nodes[node].size; i++)
+			{
+				BBox left = BBox();
+				BBox right = BBox();
+
+				for(size_t j = nodes[node].start; j < nodes[node].start + nodes[node].size; j++)
+				{
+					if(j < i) left.enclose(primitives[j].bbox());
+					else right.enclose(primitives[j].bbox());
+				}
+
+				float SAH = (left.surface_area() * (float)(i -nodes[node].start) + right.surface_area() * (float)(nodes[node].start + nodes[node].size - i)) / nodes[node].bbox.surface_area();
+				
+				if(SAH < SAH_min){
+					SAH_min = SAH;
+					index_min = i;
+					best_axis = axis;
+				}
+			}
+
+		}
+
+		std::sort(primitives.begin() + nodes[node].start, primitives.begin() + nodes[node].start + nodes[node].size,
+								[best_axis](const Primitive &a, const Primitive &b)
+								{ return a.bbox().center()[best_axis] < b.bbox().center()[best_axis]; });
+
+		BBox left_best;
+		BBox right_best;
+
+		for(size_t i = nodes[node].start; i < nodes[node].start + nodes[node].size; i++){
+			if(i < index_min) left_best.enclose(primitives[i].bbox());
+			else right_best.enclose(primitives[i].bbox());
+		}
+
+		size_t left_index = new_node(left_best, nodes[node].start, (index_min - nodes[node].start));
+		size_t right_index = new_node(right_best, index_min, (nodes[node].size + nodes[node].start - index_min));
+		nodes[node].l = left_index;
+		nodes[node].r = right_index;
+		SAH_helper(left_index);
+		SAH_helper(right_index);
+	};
+
+	BBox root_bb;
+	for(size_t i = root_idx; i < primitives.size(); i++){
+		root_bb.enclose(primitives[i].bbox());
+	}
+
+	size_t root_index = new_node(root_bb, root_idx, primitives.size());
+
+	SAH_helper(root_index);
 
 }
 
@@ -47,12 +116,88 @@ template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
     // Again, remember you can use hit() on any Primitive value.
 
 	//TODO: replace this code with a more efficient traversal:
-    Trace ret;
-    for(const Primitive& prim : primitives) {
-        Trace hit = prim.hit(ray);
-        ret = Trace::min(ret, hit);
-    }
-    return ret;
+	std::function<Trace(const Ray&, Node, Vec2&)> find_closest_hit = [&](const Ray& ray, Node node, Vec2& closest_time)
+	{
+		if(node.is_leaf())
+		{
+			Trace ret;
+			for(size_t i = node.start; i < node.start + node.size; i++)
+			{
+				Trace hit = primitives[i].hit(ray);
+				ret = Trace::min(ret, hit);
+			}
+			return ret;
+		}
+		else
+		{
+			Node left_child = nodes[node.l];
+			Node right_child = nodes[node.r];
+
+			Vec2 times_left = ray.dist_bounds;
+			Vec2 times_right = ray.dist_bounds;
+
+			bool hit_left = left_child.bbox.hit(ray, times_left);
+			bool hit_right = right_child.bbox.hit(ray, times_right);
+
+			if(hit_left && hit_right)
+			{
+				Node first = (times_left.x <= times_right.x) ? left_child : right_child;
+				Node second = (times_left.x <= times_right.x) ? right_child : left_child;
+
+				closest_time = (times_left.x <= times_right.x) ? times_left : times_right;
+				Vec2 second_Hit = (times_left.x <= times_right.x) ? times_right : times_left;
+
+				Trace ret = find_closest_hit(ray, first, closest_time);
+				if(second_Hit.x < closest_time.x) ret = find_closest_hit(ray, second, closest_time);
+				return ret;
+			}
+			else if(hit_left) return find_closest_hit(ray, nodes[node.l], times_left);
+			else if(hit_right) return find_closest_hit(ray, nodes[node.r], times_right);
+			else{
+				Trace ret;
+				ret.origin = ray.point;
+				ret.hit = false;
+				ret.distance = FLT_MAX;  
+				ret.position = Vec3{}; 
+				ret.normal = Vec3{}; 
+				ret.uv = Vec2{};
+
+				return ret;
+			}
+		}
+	};
+
+	Vec2 times = ray.dist_bounds;
+
+	if(nodes.empty()){
+		Trace ret;
+		ret.origin = ray.point;
+		ret.hit = false;
+		ret.distance = FLT_MAX;  
+		ret.position = Vec3{}; 
+		ret.normal = Vec3{}; 
+		ret.uv = Vec2{};
+
+		return ret;
+	}
+	else{
+		if(nodes[root_idx].bbox.hit(ray, times))
+		{
+			Trace hit = find_closest_hit(ray, nodes[root_idx], times);
+			return hit;
+		}
+		else{
+			Trace ret;
+			ret.origin = ray.point;
+			ret.hit = false;
+			ret.distance = FLT_MAX;  
+			ret.position = Vec3{}; 
+			ret.normal = Vec3{}; 
+			ret.uv = Vec2{};
+
+			return ret;
+		}
+	}
 }
 
 template<typename Primitive>

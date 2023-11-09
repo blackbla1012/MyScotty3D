@@ -60,7 +60,7 @@ PT::Trace Sphere::hit(Ray ray) const {
 				ret.uv = uv(ret.position);
 			}else{
 				ret.hit = false;   
-				ret.distance = 0.0f;
+				ret.distance = FLT_MAX;
 				ret.position = Vec3{};
 				ret.normal = Vec3{};
 				ret.uv = Vec2{};
@@ -74,14 +74,14 @@ PT::Trace Sphere::hit(Ray ray) const {
 				ret.uv = uv(ret.position);
 			}else{
 				ret.hit = false;   
-				ret.distance = 0.0f;
+				ret.distance = FLT_MAX;
 				ret.position = Vec3{};
 				ret.normal = Vec3{};
 				ret.uv = Vec2{};
 			}
 		}else{
 			ret.hit = false;   
-			ret.distance = 0.0f;
+			ret.distance = FLT_MAX;
 			ret.position = Vec3{};
 			ret.normal = Vec3{};
 			ret.uv = Vec2{};
