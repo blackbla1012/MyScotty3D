@@ -31,7 +31,7 @@ std::pair<Ray, float> Camera::sample_ray(RNG &rng, uint32_t px, uint32_t py) {
 	Vec3 sensorPoint_WP = Vec3(0.0f, 0.0f, -1.0f);
 	float sensor_W = 0.0f;
 	float sensor_H = 0.0f;
-	sensor_H = 2 * std::tanf( Radians(vertical_fov) / 2.0f );
+	sensor_H = 2 * std::tan( Radians(vertical_fov) / 2.0f );
 	sensor_W = sensor_H * aspect_ratio;
 	sensorPoint_WP.x = sensor_pixel.x * sensor_W / film.width - sensor_W / 2.0f;
 	sensorPoint_WP.y = sensor_pixel.y * sensor_H / film.height - sensor_H / 2.0f;
