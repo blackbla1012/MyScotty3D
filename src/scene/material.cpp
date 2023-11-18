@@ -41,8 +41,12 @@ Spectrum Lambertian::evaluate(Vec3 out, Vec3 in, Vec2 uv) const {
     // Compute the ratio of outgoing/incoming radiance when light from in_dir
     // is reflected through out_dir: (albedo / PI_F) * cos(theta).
     // Note that for Scotty3D, y is the 'up' direction.
+	if(in.y <= 0.0f) return Spectrum{};
+	
 
-    return Spectrum{};
+	Vec3 surface_normal = Vec3(0.0f, 1.0f, 0.0f);
+	float cos_theta = dot(surface_normal, in);
+    return albedo.lock()->evaluate(uv) / PI_F * cos_theta;
 }
 
 Scatter Lambertian::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
@@ -53,10 +57,10 @@ Scatter Lambertian::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 
 	Scatter ret;
 	//TODO: sample the direction the light was scatter from from a cosine-weighted hemisphere distribution:
-	ret.direction = Vec3{};
+	ret.direction = sampler.sample(rng);
 
 	//TODO: compute the attenuation of the light using Lambertian::evaluate():
-	ret.attenuation = Spectrum{};
+	ret.attenuation = evaluate(out, ret.direction, uv);
 
 	return ret;
 }
@@ -66,7 +70,7 @@ float Lambertian::pdf(Vec3 out, Vec3 in) const {
     // Compute the PDF for sampling in_dir from the cosine-weighted hemisphere distribution.
 	[[maybe_unused]] Samplers::Hemisphere::Cosine sampler; //this might be handy!
 
-    return 0.0f;
+    return sampler.pdf(in);
 }
 
 Spectrum Lambertian::emission(Vec2 uv) const {
