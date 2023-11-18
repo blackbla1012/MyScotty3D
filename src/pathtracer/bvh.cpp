@@ -116,7 +116,7 @@ template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
     // Again, remember you can use hit() on any Primitive value.
 
 	//TODO: replace this code with a more efficient traversal:
-	std::function<Trace(const Ray&, Node, Vec2&)> find_closest_hit = [&](const Ray& ray, Node node, Vec2& closest_time)
+	std::function<Trace(const Ray&, Node)> find_closest_hit = [&](const Ray& ray, Node node)
 	{
 		if(node.is_leaf())
 		{
@@ -128,42 +128,51 @@ template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
 			}
 			return ret;
 		}
-		else
+		Node left_child = nodes[node.l];
+		Node right_child = nodes[node.r];
+
+		Vec2 times_left = ray.dist_bounds;
+		Vec2 times_right = ray.dist_bounds;
+
+		bool hit_left = left_child.bbox.hit(ray, times_left);
+		bool hit_right = right_child.bbox.hit(ray, times_right);
+
+		if(hit_left && hit_right)
 		{
-			Node left_child = nodes[node.l];
-			Node right_child = nodes[node.r];
-
-			Vec2 times_left = ray.dist_bounds;
-			Vec2 times_right = ray.dist_bounds;
-
-			bool hit_left = left_child.bbox.hit(ray, times_left);
-			bool hit_right = right_child.bbox.hit(ray, times_right);
-
-			if(hit_left && hit_right)
+			if(times_left.x < times_right.x)
 			{
-				Node first = (times_left.x <= times_right.x) ? left_child : right_child;
-				Node second = (times_left.x <= times_right.x) ? right_child : left_child;
-
-				closest_time = (times_left.x <= times_right.x) ? times_left : times_right;
-				Vec2 second_Hit = (times_left.x <= times_right.x) ? times_right : times_left;
-
-				Trace ret = find_closest_hit(ray, first, closest_time);
-				if(second_Hit.x < closest_time.x) ret = find_closest_hit(ray, second, closest_time);
-				return ret;
+				Trace left_trace = find_closest_hit(ray, left_child);
+				if(left_trace.hit && left_trace.distance < times_right.x) return left_trace;
+				else if(left_trace.hit){
+					Trace right_trace = find_closest_hit(ray, right_child);
+					if(right_trace.hit && right_trace.distance < left_trace.distance) return right_trace;
+					else return left_trace;
+				}
+				else return find_closest_hit(ray, right_child);
 			}
-			else if(hit_left) return find_closest_hit(ray, nodes[node.l], times_left);
-			else if(hit_right) return find_closest_hit(ray, nodes[node.r], times_right);
 			else{
-				Trace ret;
-				ret.origin = ray.point;
-				ret.hit = false;
-				ret.distance = FLT_MAX;  
-				ret.position = Vec3{}; 
-				ret.normal = Vec3{}; 
-				ret.uv = Vec2{};
-
-				return ret;
+				Trace right_trace = find_closest_hit(ray, right_child);
+				if(right_trace.hit && right_trace.distance < times_left.x) return right_trace;
+				else if(right_trace.hit){
+					Trace left_trace = find_closest_hit(ray, left_child);
+					if(left_trace.hit && left_trace.distance < right_trace.distance) return left_trace;
+					else return right_trace;
+				}
+				else return find_closest_hit(ray, left_child);
 			}
+		}
+		else if(hit_left) return find_closest_hit(ray, left_child);
+		else if(hit_right) return find_closest_hit(ray, right_child);
+		else{
+			Trace ret;
+			ret.origin = ray.point;
+			ret.hit = false;
+			ret.distance = FLT_MAX;  
+			ret.position = Vec3{}; 
+			ret.normal = Vec3{}; 
+			ret.uv = Vec2{};
+
+			return ret;
 		}
 	};
 
@@ -183,7 +192,7 @@ template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
 	else{
 		if(nodes[root_idx].bbox.hit(ray, times))
 		{
-			Trace hit = find_closest_hit(ray, nodes[root_idx], times);
+			Trace hit = find_closest_hit(ray, nodes[root_idx]);
 			return hit;
 		}
 		else{

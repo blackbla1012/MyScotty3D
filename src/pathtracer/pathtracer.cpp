@@ -9,7 +9,7 @@
 namespace PT {
 
 constexpr bool SAMPLE_AREA_LIGHTS = false;
-constexpr bool RENDER_NORMALS = true;
+constexpr bool RENDER_NORMALS = false;
 constexpr bool LOG_CAMERA_RAYS = true;
 constexpr bool LOG_AREA_LIGHT_RAYS = false;
 static thread_local RNG log_rng(0x15462662); //separate RNG for logging a fraction of rays to avoid changing result when logging enabled
@@ -27,15 +27,26 @@ Spectrum Pathtracer::sample_direct_lighting_task4(RNG &rng, const Shading_Info& 
     Spectrum radiance = sum_delta_lights(hit);
 
 	//TODO: ask hit.bsdf to sample an in direction that would scatter out along hit.out_dir
+	Materials::Scatter in = hit.bsdf.scatter(rng, hit.out_dir, hit.uv);
+	Vec3 in_dir = in.direction;
 
 	//TODO: rotate that direction into world coordinates
+	Vec3 in_worldDir = hit.object_to_world.rotate(in_dir).unit();
 
 	//TODO: construct a ray travelling in that direction
 	// NOTE: because we want emitted light only, can use depth = 0 for the ray
+	Ray in_ray = Ray(hit.pos, in_worldDir, Vec2(EPS_F, std::numeric_limits<float>::infinity()), 0);
 
 	//TODO: trace() the ray to get the emitted light (first part of the return value)
+	Spectrum emission = trace(rng, in_ray).first;
 
 	//TODO: weight properly depending on the probability of the sampled scattering direction and add to radiance
+	if(hit.bsdf.is_specular()){
+		radiance += emission * in.attenuation; 
+	}
+	else{
+		radiance += emission * in.attenuation / hit.bsdf.pdf(hit.out_dir, in_dir);
+	}
 
 	return radiance;
 }
@@ -65,17 +76,27 @@ Spectrum Pathtracer::sample_indirect_lighting(RNG &rng, const Shading_Info& hit)
 	//NOTE: this function and sample_direct_lighting_task4() perform very similar tasks.
 
 	//TODO: ask hit.bsdf to sample an in direction that would scatter out along hit.out_dir
+	Materials::Scatter in = hit.bsdf.scatter(rng, hit.out_dir, hit.uv);
 
 	//TODO: rotate that direction into world coordinates
+	Vec3 in_worldDir = hit.object_to_world.rotate(in.direction).unit();
 
 	//TODO: construct a ray travelling in that direction
 	// NOTE: be sure to reduce the ray depth! otherwise infinite recursion is possible
+	Ray in_ray = Ray(hit.pos, in_worldDir, Vec2(EPS_F, std::numeric_limits<float>::infinity()), hit.depth - 1);
 
 	//TODO: trace() the ray to get the reflected light (the second part of the return value)
+	Spectrum reflected = trace(rng, in_ray).second;
 
 	//TODO: weight properly depending on the probability of the sampled scattering direction and set radiance
-
 	Spectrum radiance;
+	if(hit.bsdf.is_specular()){
+		radiance = reflected * in.attenuation;
+	}
+	else{
+		radiance = reflected * in.attenuation / hit.bsdf.pdf(hit.out_dir, in.direction);
+	}
+
     return radiance;
 }
 

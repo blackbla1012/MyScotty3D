@@ -46,8 +46,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/yunqi/Scotty3D/src/scene",
-      "program": "c:/Users/yunqi/Scotty3D/src/scene/build/Debug/outDebug",
+      "cwd": "c:/Users/yunqi/Scotty3D/src/pathtracer",
+      "program": "c:/Users/yunqi/Scotty3D/src/pathtracer/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
