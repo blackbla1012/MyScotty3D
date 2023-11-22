@@ -10,8 +10,10 @@ Vec3 reflect(Vec3 dir) {
     // Return direction to incoming light that would be
 	// reflected out in direction dir from surface
 	// with normal (0,1,0)
+	Vec3 surface_normal = Vec3(0.0f, 1.0f, 0.0f);
+	Vec3 in_dir = 2 * dot(dir, surface_normal) * surface_normal - dir;
 
-    return Vec3{};
+    return in_dir;
 }
 
 Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal) {
@@ -23,16 +25,41 @@ Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal) {
 	// and false otherwise.
 
 	// The surface normal is (0,1,0)
+	float vaccum_index = 1.0f;
+	Vec3 surface_normal = out_dir.y >=0 ? Vec3(0.0f, 1.0f, 0.0f) : Vec3(0.0f, -1.0f, 0.0f);
+	float ratio;
+	if(out_dir.y >= 0){
+		ratio = vaccum_index / index_of_refraction;
+	}
+	else{
+		ratio = index_of_refraction / vaccum_index;
+	}
+	float cos_theta_out = std::abs(dot(out_dir, surface_normal)) / out_dir.norm();
+	float sin_theta_out = std:: sqrt(1.0f - cos_theta_out * cos_theta_out);
+	float sin_theta_in = sin_theta_out * ratio;
 
-	return Vec3{};
+	if(sin_theta_in > 1.0f){
+		was_internal = true;
+		return reflect(out_dir);
+	}
+	else{
+		was_internal = false;
+		float cos_theta_in = std::sqrt(1.0f - sin_theta_in * sin_theta_in);
+		return ratio * -out_dir + (ratio * cos_theta_out - cos_theta_in) * surface_normal;
+	}
 }
 
 float schlick(Vec3 in_dir, float index_of_refraction) {
 	//A3T5 Materials - Schlick's approximation helper
 
 	// Implement Schlick's approximation of the Fresnel reflection factor.
+	float vaccum_index = 1.0f;
+	Vec3 surface_normal = Vec3(0.0f, 1.0f, 0.0f);
+	float cos_theta = std::abs(dot(in_dir, surface_normal)) / in_dir.norm();
+	float R0 = ((vaccum_index - index_of_refraction) * (vaccum_index - index_of_refraction)) / ((vaccum_index + index_of_refraction) * (vaccum_index + index_of_refraction));
+	float reflection_coefficient = R0 + (1.0f - R0) * (float)std::pow((1 - cos_theta), 5);
 
-	return 0.0f;
+	return reflection_coefficient;
 }
 
 Spectrum Lambertian::evaluate(Vec3 out, Vec3 in, Vec2 uv) const {
@@ -45,7 +72,7 @@ Spectrum Lambertian::evaluate(Vec3 out, Vec3 in, Vec2 uv) const {
 	
 
 	Vec3 surface_normal = Vec3(0.0f, 1.0f, 0.0f);
-	float cos_theta = dot(surface_normal, in);
+	float cos_theta = dot(surface_normal, in) / in.norm();
     return albedo.lock()->evaluate(uv) / PI_F * cos_theta;
 }
 
@@ -97,8 +124,8 @@ Scatter Mirror::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 	// Similar to albedo, reflectance represents the ratio of incoming light to reflected light
 
     Scatter ret;
-    ret.direction = Vec3();
-    ret.attenuation = Spectrum{};
+    ret.direction = reflect(out);
+    ret.attenuation = reflectance.lock()->evaluate(uv);
     return ret;
 }
 
@@ -131,10 +158,23 @@ Scatter Refract::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 	// For attenuation, be sure to take a look at the Specular Transimission section of the PBRT textbook for a derivation
 	//  You do not need to scale by the Fresnel Coefficient - you'll only need to account for the correct ratio of indices of refraction
 
+	bool was_internal;
+	float vaccum_index = 1.0f;
     Scatter ret;
-    ret.direction = Vec3();
-    ret.attenuation = Spectrum{};
-    return ret;
+    ret.direction = refract(out, ior, was_internal);
+	if(was_internal){
+		ret.attenuation = Spectrum{1.0f};
+		return ret;
+	}
+	else{
+		if(out.y > 0.0f){
+			ret.attenuation = transmittance.lock()->evaluate(uv) * (ior * ior) / (vaccum_index * vaccum_index);
+		}
+		else{
+			ret.attenuation = transmittance.lock()->evaluate(uv) * (vaccum_index * vaccum_index) / (ior * ior);
+		}
+		return ret;
+	}
 }
 
 float Refract::pdf(Vec3 out, Vec3 in) const {
@@ -182,10 +222,31 @@ Scatter Glass::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 	// For attenuation, be sure to take a look at the Specular Transimission section of the PBRT textbook for a derivation
 	//  You do not need to scale by the Fresnel Coefficient - you'll only need to account for the correct ratio of indices of refraction
 
+	bool is_reflected = rng.coin_flip(schlick(out, ior));
+
     Scatter ret;
-    ret.direction = Vec3();
-    ret.attenuation = Spectrum{};
-    return ret;
+	if(is_reflected){
+		ret.direction = reflect(out);
+    	ret.attenuation = reflectance.lock()->evaluate(uv);
+		return ret;
+	}
+	else{
+		float vaccum_index = 1.0f;
+		bool was_internal;
+		ret.direction = refract(out, ior, was_internal);
+		if(was_internal){
+			ret.attenuation = Spectrum{1.0f};
+			return ret;
+		}else{
+			if(out.y > 0.0f){
+				ret.attenuation = transmittance.lock()->evaluate(uv) * (ior * ior) / (vaccum_index * vaccum_index);
+			}
+			else{
+				ret.attenuation = transmittance.lock()->evaluate(uv) * (vaccum_index * vaccum_index) / (ior * ior);
+			}
+			return ret;
+		}
+	}
 }
 
 float Glass::pdf(Vec3 out, Vec3 in) const {

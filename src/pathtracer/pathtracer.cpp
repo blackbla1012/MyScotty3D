@@ -8,7 +8,7 @@
 
 namespace PT {
 
-constexpr bool SAMPLE_AREA_LIGHTS = false;
+constexpr bool SAMPLE_AREA_LIGHTS = true;
 constexpr bool RENDER_NORMALS = false;
 constexpr bool LOG_CAMERA_RAYS = true;
 constexpr bool LOG_AREA_LIGHT_RAYS = false;
@@ -58,6 +58,24 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
     // For task 6, we want to upgrade our direct light sampling procedure to also
     // sample area lights using mixture sampling.
 	Spectrum radiance = sum_delta_lights(hit);
+
+	if(hit.bsdf.is_specular()) return sample_direct_lighting_task4(rng, hit);
+
+	Materials::Scatter in = hit.bsdf.scatter(rng, hit.out_dir, hit.uv);
+	Vec3 sample_direction, world_direction;
+
+	if(rng.coin_flip(0.5f)){
+		sample_direction = in.direction;
+		world_direction = hit.object_to_world.rotate(sample_direction).unit();
+	}else{
+		world_direction = sample_area_lights(rng, hit.pos);
+	}
+
+	Ray shadow_ray = Ray(hit.pos, world_direction, Vec2(EPS_F, std::numeric_limits<float>::infinity()), 0);
+	Spectrum emissive = trace(rng, shadow_ray).first;
+
+	float average_pdf = (hit.bsdf.pdf(hit.out_dir, hit.world_to_object.rotate(world_direction)) + area_lights_pdf(hit.pos, world_direction)) / 2.0f;
+	radiance += emissive * hit.bsdf.evaluate(hit.out_dir, hit.world_to_object.rotate(world_direction), hit.uv) / average_pdf;
 
 	// Example of using log_ray():
 	if constexpr (LOG_AREA_LIGHT_RAYS) {
