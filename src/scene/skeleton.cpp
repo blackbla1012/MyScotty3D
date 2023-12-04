@@ -44,11 +44,17 @@ std::vector< Mat4 > Skeleton::bind_pose() const {
 	bind.reserve(bones.size());
 
 	//NOTE: bones is guaranteed to be ordered such that parents appear before child bones.
-
+	
 	for (auto const &bone : bones) {
 		(void)bone; //avoid complaints about unused bone
 		//placeholder -- your code should actually compute the correct transform:
-		bind.emplace_back(Mat4::I);
+		if(bone.parent == -1U) {
+			bind.emplace_back(Mat4::translate(base));
+		}
+		else{
+			BoneIndex parent_index = bone.parent;
+			bind.emplace_back(bind[parent_index] * Mat4::translate(bones[parent_index].extent));
+		}
 	}
 
 	assert(bind.size() == bones.size()); //should have a transform for every bone.
@@ -66,9 +72,23 @@ std::vector< Mat4 > Skeleton::current_pose() const {
 	//Useful functions:
 	//Bone::compute_rotation_axes() will tell you what axes (in local bone space) Bone::pose should rotate around.
 	//Mat4::angle_axis(angle, axis) will produce a matrix that rotates angle (in degrees) around a given axis.
+	std::vector< Mat4 > current;
+	current.reserve(bones.size());
+	
+	for (auto const &bone : bones) {
+		Vec3 x, y, z;
+		bone.compute_rotation_axes(&x, &y, &z);
+		if(bone.parent == -1U) {
+			current.emplace_back(Mat4::translate(base + base_offset) * Mat4::angle_axis(bone.pose.z, z) * Mat4::angle_axis(bone.pose.y, y) * Mat4::angle_axis(bone.pose.x, x));
+		}
+		else{
+			BoneIndex parent_index = bone.parent;
+			current.emplace_back(current[parent_index] * Mat4::translate(bones[parent_index].extent) * Mat4::angle_axis(bone.pose.z, z) * Mat4::angle_axis(bone.pose.y, y) * Mat4::angle_axis(bone.pose.x, x));
+		}
+	}
 
-	return std::vector< Mat4 >(bones.size(), Mat4::I);
-
+	assert(current.size() == bones.size()); //should have a transform for every bone.
+	return current;
 }
 
 std::vector< Vec3 > Skeleton::gradient_in_current_pose() const {
@@ -81,6 +101,39 @@ std::vector< Vec3 > Skeleton::gradient_in_current_pose() const {
 
 	//TODO: loop over handles and over bones in the chain leading to the handle, accumulating gradient contributions.
 	//remember bone.compute_rotation_axes() -- should be useful here, too!
+
+	std::vector<Mat4> current_poses = current_pose();
+	for(auto const &handle : handles){
+
+		if(handle.bone == -1U || !handle.enabled) continue;
+
+		BoneIndex bone_index = handle.bone;
+		Vec3 pose = current_poses[bone_index] * bones[bone_index].pose;
+		
+		while(bones[bone_index].parent != -1U){
+
+			Bone bone = bones[bone_index];
+			Bone parent_bone = bones[bone.parent];
+
+			Vec3 x, y, z;
+			bones[bone_index].compute_rotation_axes(&x, &y, &z);
+
+			Mat4 xform_x = current_poses[bone.parent] * Mat4::translate(parent_bone.extent) * Mat4::angle_axis(bone.pose.z, z) * Mat4::angle_axis(bone.pose.y, y);
+			Vec3 rotation_x = cross(xform_x * x, pose - xform_x * Vec3(0.0f));
+
+			Mat4 xform_y = current_poses[bone.parent] * Mat4::translate(parent_bone.extent) * Mat4::angle_axis(bone.pose.z, z);
+			Vec3 rotation_y = cross(xform_y * y, pose - xform_y * Vec3(0.0f));
+
+			Mat4 xform_z = current_poses[bone.parent] * Mat4::translate(parent_bone.extent);
+			Vec3 rotation_z = cross(xform_z * z, pose - xform_z * Vec3(0.0f));
+
+			gradient[bone_index].x += dot((pose - handle.target), rotation_x);
+			gradient[bone_index].y += dot((pose - handle.target), rotation_y);
+			gradient[bone_index].z += dot((pose - handle.target), rotation_z);
+
+			bone_index = bones[bone_index].parent;
+		}
+	}
 
 	assert(gradient.size() == bones.size());
 	return gradient;
