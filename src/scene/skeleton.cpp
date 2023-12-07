@@ -108,7 +108,7 @@ std::vector< Vec3 > Skeleton::gradient_in_current_pose() const {
 		if(handle.bone == -1U || !handle.enabled) continue;
 
 		BoneIndex bone_index = handle.bone;
-		Vec3 pose = current_poses[bone_index] * bones[bone_index].pose;
+		Vec3 p = current_poses[bone_index] * bones[bone_index].extent;
 		
 		while(bones[bone_index].parent != -1U){
 
@@ -119,19 +119,32 @@ std::vector< Vec3 > Skeleton::gradient_in_current_pose() const {
 			bones[bone_index].compute_rotation_axes(&x, &y, &z);
 
 			Mat4 xform_x = current_poses[bone.parent] * Mat4::translate(parent_bone.extent) * Mat4::angle_axis(bone.pose.z, z) * Mat4::angle_axis(bone.pose.y, y);
-			Vec3 rotation_x = cross(xform_x * x, pose - xform_x * Vec3(0.0f));
-
 			Mat4 xform_y = current_poses[bone.parent] * Mat4::translate(parent_bone.extent) * Mat4::angle_axis(bone.pose.z, z);
-			Vec3 rotation_y = cross(xform_y * y, pose - xform_y * Vec3(0.0f));
-
 			Mat4 xform_z = current_poses[bone.parent] * Mat4::translate(parent_bone.extent);
-			Vec3 rotation_z = cross(xform_z * z, pose - xform_z * Vec3(0.0f));
 
-			gradient[bone_index].x += dot((pose - handle.target), rotation_x);
-			gradient[bone_index].y += dot((pose - handle.target), rotation_y);
-			gradient[bone_index].z += dot((pose - handle.target), rotation_z);
+			Vec3 r = current_poses[bone_index] * Vec3(0.0f, 0.0f, 0.0f);
+			gradient[bone_index].x += dot((p - handle.target), cross(xform_x.rotate(x), (p-r)));
+			gradient[bone_index].y += dot((p - handle.target), cross(xform_y.rotate(y), (p-r)));
+			gradient[bone_index].z += dot((p - handle.target), cross(xform_z.rotate(z), (p-r)));
 
 			bone_index = bones[bone_index].parent;
+		}
+
+		if(bones[bone_index].parent == -1U){
+
+			Bone bone = bones[bone_index];
+			
+			Vec3 x, y, z;
+			bones[bone_index].compute_rotation_axes(&x, &y, &z);
+
+			Mat4 xform_x = Mat4::translate(base + base_offset) * Mat4::angle_axis(bone.pose.z, z) * Mat4::angle_axis(bone.pose.y, y);
+			Mat4 xform_y = Mat4::translate(base + base_offset) * Mat4::angle_axis(bone.pose.z, z);
+			Mat4 xform_z =  Mat4::translate(base + base_offset);
+
+			Vec3 r = current_poses[bone_index] * Vec3(0.0f, 0.0f, 0.0f);
+			gradient[bone_index].x += dot((p - handle.target), cross(xform_x.rotate(x), (p-r)));
+			gradient[bone_index].y += dot((p - handle.target), cross(xform_y.rotate(y), (p-r)));
+			gradient[bone_index].z += dot((p - handle.target), cross(xform_z.rotate(z), (p-r)));
 		}
 	}
 
@@ -149,6 +162,19 @@ bool Skeleton::solve_ik(uint32_t steps) {
 
 	//if at a local minimum (e.g., gradient is near-zero), return 'true'.
 	//if run through all steps, return `false`.
+
+	float timestep = 0.1f;
+	float tolerance = 0.000001f;
+	for(uint32_t i = 0; i < steps; i++){
+		std::vector<Vec3> gradient = gradient_in_current_pose();
+		float grad_norm = 0.0f;
+		for(int j = 0; j < gradient.size(); j++)
+			grad_norm += gradient[j].norm_squared();
+		if (grad_norm <= tolerance) return true;
+		for(size_t k = 0; k < bones.size(); k++)
+			bones[k].pose -= timestep * gradient[k];
+
+	}
 	return false;
 }
 
