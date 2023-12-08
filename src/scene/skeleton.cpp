@@ -184,8 +184,13 @@ Vec3 Skeleton::closest_point_on_line_segment(Vec3 const &a, Vec3 const &b, Vec3 
     // Return the closest point to 'p' on the line segment from a to b
 
 	//Efficiency note: you can do this without any sqrt's! (no .unit() or .norm() is needed!)
-
-    return Vec3{};
+	Vec3 AP = p - a;
+	Vec3 AB = b - a;
+	float ratio = dot(AP, AB) / AB.norm_squared();
+	if(ratio > 1.0f) return b;
+	else if(ratio < 0.0f) return a;
+	else return (a + ratio * AB);
+	
 }
 
 void Skeleton::assign_bone_weights(Halfedge_Mesh *mesh_) const {
@@ -200,6 +205,19 @@ void Skeleton::assign_bone_weights(Halfedge_Mesh *mesh_) const {
 	//be sure to use bone positions in the bind pose (not the current pose!)
 
 	//you should fill in the helper closest_point_on_line_segment() before working on this function
+	auto bpose = bind_pose();
+
+	for(auto v:mesh.vertices){
+		float weightSum = 0.0f;
+		std::vector<float> weight;
+		weight.reserve(bones.size());//restore the size of weight
+		for(BoneIndex i = 0U; i < bones.size(); i++){
+			Vec3 Closest_Point = closest_point_on_line_segment(bpose[i] * Vec3(0.0f), bpose[i] * bones[i].extent, v.position);
+			Vec3 wijVec = v.position - Closest_Point;
+			float wijNorm = wijVec.norm();
+			
+		}
+	}
 
 }
 
