@@ -38,6 +38,11 @@ Test test_a4_task3_skin_cylinder_root("a4.task3.skin.cylinder.root", []() {
     skeleton.assign_bone_weights(&mesh);
 	auto actual = skeleton.skin(mesh, bind, current);
 
+    for(Indexed_Mesh::Vert v :actual.vertices()){
+        printf("\n %f,%f,%f",v.pos.x, v.pos.y, v.pos.z);
+    }
+    
+
 	std::string test_case = "Testing on the root bone...";
     expected_vertices = {{Vec3(0.000000f, 0.000000f, 0.000000f), Vec3(0.500000f, -0.866025f, 0.000000f), Vec2(0.000000f, 0.000000f), 26},
                         {Vec3(0.433013f, 0.250000f, 0.000000f), Vec3(0.500000f, -0.866025f, 0.000000f), Vec2(0.000000f, 0.000000f), 26},

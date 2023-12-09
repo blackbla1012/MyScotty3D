@@ -208,15 +208,26 @@ void Skeleton::assign_bone_weights(Halfedge_Mesh *mesh_) const {
 	auto bpose = bind_pose();
 
 	for(auto v:mesh.vertices){
+		v.bone_weights.clear();
+		std::vector<Halfedge_Mesh::Vertex::Bone_Weight> bone_weights;
 		float weightSum = 0.0f;
-		std::vector<float> weight;
-		weight.reserve(bones.size());//restore the size of weight
+	
 		for(BoneIndex i = 0U; i < bones.size(); i++){
 			Vec3 Closest_Point = closest_point_on_line_segment(bpose[i] * Vec3(0.0f), bpose[i] * bones[i].extent, v.position);
 			Vec3 wijVec = v.position - Closest_Point;
 			float wijNorm = wijVec.norm();
-			
+			float weight = std::max(0.0f, bones[i].radius - wijNorm) / bones[i].radius;
+			bone_weights.emplace_back(Halfedge_Mesh::Vertex::Bone_Weight{i, weight});
+			weightSum += weight;
 		}
+
+		if(weightSum > 0.0f){
+			for(auto &weight : bone_weights){
+				weight.weight /= weightSum;
+			}
+			v.bone_weights = bone_weights;
+		}
+
 	}
 
 }
@@ -239,17 +250,39 @@ Indexed_Mesh Skeleton::skin(Halfedge_Mesh const &mesh, std::vector< Mat4 > const
 	skinned_normals.reserve(mesh.halfedges.size());
 
 	//(you will probably want to precompute some bind-to-current transformation matrices here)
+	std::vector<Mat4> bind_to_curr;
+	bind_to_curr.reserve(bind.size());
+	for(int i = 0; i < bind_to_curr.size(); i++){
+		Mat4 bToCBone =bind[i].inverse() * current[i];
+		bind_to_curr.emplace_back(bToCBone);
+	}
 
 	for (auto vi = mesh.vertices.begin(); vi != mesh.vertices.end(); ++vi) {
-		skinned_positions.emplace(vi, vi->position); //PLACEHOLDER! Replace with code that computes the position of the vertex according to vi->position and vi->bone_weights.
+
+
+		//skinned_positions.emplace(vi, vi->position); //PLACEHOLDER! Replace with code that computes the position of the vertex according to vi->position and vi->bone_weights.
 		//NOTE: vertices with empty bone_weights should remain in place.
+
+		Mat4 weightedb_to_C = Mat4::Zero;
+		if(vi->bone_weights.size() == 0) skinned_positions.emplace(vi, vi->position);
+		else{
+			for(BoneIndex i = 0U; i < vi->bone_weights.size(); i++){
+				weightedb_to_C += bind_to_curr[vi->bone_weights[i].bone] * vi->bone_weights[i].weight;
+			}
+			skinned_positions.emplace(vi, weightedb_to_C * vi->position); 
+		}
+
+		if(weightedb_to_C == Mat4::Zero) weightedb_to_C = Mat4::I;
+		
 
 		//circulate corners at this vertex:
 		auto h = vi->halfedge;
 		do {
 			//NOTE: could skip if h->face->boundary, since such corners don't get emitted
+			if(h->face->boundary) continue;
 
-			skinned_normals.emplace(h, h->corner_normal); //PLACEHOLDER! Replace with code that properly transforms the normal vector! Make sure that you normalize correctly.
+			Mat4 b_to_cNormalWeighted =  Mat4::transpose(Mat4::inverse(weightedb_to_C));
+			skinned_normals.emplace(h, (b_to_cNormalWeighted * h->corner_normal).unit()); //PLACEHOLDER! Replace with code that properly transforms the normal vector! Make sure that you normalize correctly.
 
 			h = h->twin->next;
 		} while (h != vi->halfedge);
@@ -259,7 +292,35 @@ Indexed_Mesh Skeleton::skin(Halfedge_Mesh const &mesh, std::vector< Mat4 > const
 
 	//Hint: you should be able to use the code from Indexed_Mesh::from_halfedge_mesh (SplitEdges version) pretty much verbatim, you'll just need to fill in the positions and normals.
 
-	Indexed_Mesh result = Indexed_Mesh::from_halfedge_mesh(mesh, Indexed_Mesh::SplitEdges); //PLACEHOLDER! you'll probably want to copy the SplitEdges case from this function o'er here and modify it to use skinned_positions and skinned_normals.
+	std::vector<Indexed_Mesh::Vert> verts;
+	std::vector<Indexed_Mesh::Index> idxs;
+
+	for (Halfedge_Mesh::FaceCRef f = mesh.faces.begin(); f != mesh.faces.end(); f++) {
+		if (f->boundary) continue;
+
+		//every corner gets its own copy of a vertex:
+		uint32_t corners_begin = static_cast<uint32_t>(verts.size());
+		Halfedge_Mesh::HalfedgeCRef h = f->halfedge;
+		do {
+			Indexed_Mesh::Vert vert;
+			vert.pos = skinned_positions.at(h->vertex);
+			vert.norm = skinned_normals.at(h);
+			vert.uv = h->corner_uv;
+			vert.id = f->id;
+			verts.emplace_back(vert);
+			h = h->next;
+		} while (h != f->halfedge);
+		uint32_t corners_end = static_cast<uint32_t>(verts.size());
+
+		//divide face into a triangle fan:
+		for (size_t i = corners_begin + 1; i + 1 < corners_end; i++) {
+			idxs.emplace_back(corners_begin);
+			idxs.emplace_back(static_cast<uint32_t>(i));
+			idxs.emplace_back(static_cast<uint32_t>(i+1));
+		}
+	}
+
+	Indexed_Mesh result = Indexed_Mesh(std::move(verts), std::move(idxs));//PLACEHOLDER! you'll probably want to copy the SplitEdges case from this function o'er here and modify it to use skinned_positions and skinned_normals.
 
 	return result;
 }
