@@ -18,7 +18,46 @@ bool Particles::Particle::update(const PT::Aggregate &scene, Vec3 const &gravity
 
 	// (5) Decrease the particle's age and return 'false' if it should be removed.
 
-	return false;
+	float time_left = dt;
+
+	if(velocity.norm() < EPS_F){
+		velocity += gravity * dt;
+		age -= dt;
+		return (age > 0);	
+	}
+
+	while(time_left > EPS_F){
+		Ray ray = Ray(position, velocity);
+
+		PT::Trace hit = scene.hit(ray);
+
+		if(!hit.hit){
+			position += velocity * dt;
+			velocity += gravity * dt;
+			break;
+		}
+
+		float cosTheta = dot(hit.normal, velocity) / (hit.normal.norm() * velocity.norm());
+		float t = std::max(0.0f, (hit.distance - std::fabs(radius / cosTheta)) / velocity.norm());
+		
+		if(t > time_left){
+			position += velocity * time_left;
+			velocity += gravity * time_left;
+			printf("\nposition %f, %f, %f", position.x, position.y, position.z);
+			printf("\nvelocity %f, %f, %f", velocity.x, velocity.y, velocity.z);
+			break;
+		}//edge case
+
+		position += velocity * t;
+		velocity = velocity - 2.0f * dot(velocity, hit.normal.unit()) * hit.normal.unit();
+		velocity += gravity * t;
+		
+		time_left = time_left - t;
+
+	}
+	age -= dt;
+	return (age > 0);
+
 }
 
 void Particles::advance(const PT::Aggregate& scene, const Mat4& to_world, float dt) {
