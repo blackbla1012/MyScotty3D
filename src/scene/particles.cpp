@@ -46,7 +46,7 @@ bool Particles::Particle::update(const PT::Aggregate &scene, Vec3 const &gravity
 			printf("\nposition %f, %f, %f", position.x, position.y, position.z);
 			printf("\nvelocity %f, %f, %f", velocity.x, velocity.y, velocity.z);
 			break;
-		}//edge case
+		}
 
 		position += velocity * t;
 		velocity = velocity - 2.0f * dot(velocity, hit.normal.unit()) * hit.normal.unit();
